@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
+import { sumInCurrency, type Currency } from "@/lib/money";
 import { periodOfDate, periodIndex, type PeriodRef } from "@/lib/periods";
 import type { AppSettings } from "./settings";
 

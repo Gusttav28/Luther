@@ -1,5 +1,12 @@
 import { defineConfig } from "@playwright/test";
 
+// Make OWNER_EMAIL/OWNER_PASSWORD from .env available to the tests (Node 20.12+).
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // .env optional — CI can provide real env vars instead.
+}
+
 export default defineConfig({
   testDir: "tests/e2e",
   timeout: 60_000,

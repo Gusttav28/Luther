@@ -86,18 +86,22 @@ export function CategoryRowActions({
   archived: boolean;
 }) {
   const [renaming, setRenaming] = useState(false);
-  const [renameState, renameAction, renamePending] = useActionState(
-    renameCategoryAction,
-    initialActionState
-  );
+  const [renameErrors, setRenameErrors] = useState<Record<string, string> | undefined>();
   const [deleteState, deleteAction] = useActionState(deleteCategoryAction, initialActionState);
-  useEffect(() => {
-    if (renameState.ok) setRenaming(false);
-  }, [renameState.ok]);
+
+  async function handleRename(formData: FormData) {
+    const result = await renameCategoryAction(initialActionState, formData);
+    if (result.ok) {
+      setRenaming(false);
+      setRenameErrors(undefined);
+    } else {
+      setRenameErrors(result.errors);
+    }
+  }
 
   if (renaming) {
     return (
-      <form action={renameAction} className="flex items-center gap-1">
+      <form action={handleRename} className="flex items-center gap-1">
         <input type="hidden" name="id" value={categoryId} />
         <input
           name="name"
@@ -105,13 +109,14 @@ export function CategoryRowActions({
           aria-label="Category name"
           className="w-24 rounded border border-stone-300 px-1.5 py-1 text-xs"
         />
-        <button type="submit" disabled={renamePending} className="text-xs font-medium text-brand-600">
+        <button type="submit" className="text-xs font-medium text-brand-600">
           Save
         </button>
         <button type="button" onClick={() => setRenaming(false)} className="text-xs text-stone-400">
           ✕
         </button>
-        {renameState.errors?.name && <p className="error-text">{renameState.errors.name}</p>}
+        {renameErrors?.name && <p className="error-text">{renameErrors.name}</p>}
+        {renameErrors?._form && <p className="error-text">{renameErrors._form}</p>}
       </form>
     );
   }

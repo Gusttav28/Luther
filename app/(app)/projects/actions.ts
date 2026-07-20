@@ -123,10 +123,7 @@ export async function moveProjectAction(formData: FormData): Promise<void> {
  * current half-month period, recording ProjectContribution rows (R9). Refuses
  * to double-apply for the same period.
  */
-export async function applyAllocationAction(
-  _prev: ActionState,
-  _formData: FormData
-): Promise<ActionState> {
+export async function applyAllocationAction(): Promise<ActionState> {
   try {
     const userId = await requireUserId();
     const [allocation, settings] = await Promise.all([
