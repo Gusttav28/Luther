@@ -1,9 +1,23 @@
-import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/settings";
 import { getOverview } from "@/lib/queries/overview";
-import { Money, RatesNote } from "@/components/money";
+import { getProjectsView } from "@/lib/queries/projects";
+import {
+  computeMomDeltas,
+  getCashflowSeries,
+  getSpentByCategory,
+  priorMonth,
+} from "@/lib/queries/overview-dashboard";
+import { RatesNote } from "@/components/money";
 import { MonthPicker } from "@/components/month-picker";
+import { KpiCards } from "@/components/overview/kpi-cards";
+import { CashflowChart } from "@/components/overview/cashflow-chart";
+import { SpentByCategory } from "@/components/overview/spent-by-category";
+import { CompositionDonut } from "@/components/overview/composition-donut";
+import { HalfMonthSchedule } from "@/components/overview/half-month-schedule";
+import { ProjectsProgress } from "@/components/overview/projects-progress";
+import { OverviewRefresh } from "@/components/overview/overview-refresh";
+import { currentPeriod, monthName, type HalfPeriod } from "@/lib/periods";
 
 export const dynamic = "force-dynamic";
 
@@ -19,111 +33,83 @@ export default async function OverviewPage({
   const month = Number(params.month) || now.getMonth() + 1;
 
   const settings = await getSettings(userId);
-  const overview = await getOverview(
-    userId,
-    year,
-    month,
-    settings.reportingCurrency,
-    settings.rates
-  );
+  const prior = priorMonth(year, month);
 
-  const cards = [
-    { label: "Earned", value: overview.earned, tone: "text-brand-700" },
-    { label: "Spent", value: overview.spent, tone: "text-red-600" },
-    { label: "Saved", value: overview.saved, tone: "text-sky-600" },
-    { label: "Remaining", value: overview.remaining, tone: "text-stone-900" },
-  ] as const;
+  const [overview, priorOverview, spentByCategory, cashflow, projectsView] =
+    await Promise.all([
+      getOverview(userId, year, month, settings.reportingCurrency, settings.rates),
+      getOverview(
+        userId,
+        prior.year,
+        prior.month,
+        settings.reportingCurrency,
+        settings.rates
+      ),
+      getSpentByCategory(userId, year, month, settings.reportingCurrency, settings.rates),
+      getCashflowSeries(userId, year, month, settings.reportingCurrency, settings.rates),
+      getProjectsView(userId, settings.rates),
+    ]);
 
+  const mom = computeMomDeltas(overview, priorOverview);
+
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const highlightPeriod: HalfPeriod | null = isCurrentMonth
+    ? currentPeriod(now).period
+    : null;
+
+  const kpis = [
+    { key: "earned" as const, label: "Earned", value: overview.earned },
+    { key: "spent" as const, label: "Spent", value: overview.spent },
+    { key: "saved" as const, label: "Saved", value: overview.saved },
+    { key: "remaining" as const, label: "Remaining", value: overview.remaining },
+    {
+      key: "lifetime" as const,
+      label: "Lifetime savings",
+      value: overview.lifetimeSavingsBalance,
+    },
+  ];
+
+  // Serialize Date fields for client boundaries (projects only used server-side here).
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
-        <MonthPicker year={year} month={month} basePath="/" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {cards.map((card) => (
-          <div key={card.label} className="card">
-            <p className="field-label">{card.label}</p>
-            <p className={`text-xl font-bold tabular-nums ${card.tone}`}>
-              <Money minor={card.value} currency={settings.reportingCurrency} />
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="card bg-brand-600 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">
-              Lifetime savings balance
-            </p>
-            <p className="text-2xl font-bold tabular-nums">
-              <Money
-                minor={overview.lifetimeSavingsBalance}
-                currency={settings.reportingCurrency}
-              />
-            </p>
-          </div>
-          <Link
-            href="/savings"
-            className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium hover:bg-white/25"
-          >
-            Manage
-          </Link>
+        <div>
+          <h1 className="page-title">Overview</h1>
+          <p className="mt-0.5 text-sm text-stone-500">
+            {monthName(month)} {year} · Finance analytics
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <MonthPicker year={year} month={month} basePath="/" />
+          <OverviewRefresh />
         </div>
       </div>
 
-      <section className="card">
-        <h2 className="mb-3 text-base font-semibold">Half-month breakdown</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-sm">
-            <thead>
-              <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Period
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Earned
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Spent
-                </th>
-                <th scope="col" className="py-2 text-right font-medium">
-                  Saved
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {(["H1", "H2"] as const).map((period) => (
-                <tr key={period} className="border-b border-stone-100 last:border-0">
-                  <th scope="row" className="py-2 pr-4 text-left font-medium">
-                    {period === "H1" ? "1st – 15th" : "16th – end"}
-                  </th>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    <Money
-                      minor={overview.perPeriod[period].earned}
-                      currency={settings.reportingCurrency}
-                    />
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    <Money
-                      minor={overview.perPeriod[period].spent}
-                      currency={settings.reportingCurrency}
-                    />
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    <Money
-                      minor={overview.perPeriod[period].saved}
-                      currency={settings.reportingCurrency}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <KpiCards items={kpis} currency={settings.reportingCurrency} mom={mom} />
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <CashflowChart points={cashflow} currency={settings.reportingCurrency} />
         </div>
-      </section>
+        <div className="lg:col-span-2">
+          <SpentByCategory data={spentByCategory} currency={settings.reportingCurrency} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <CompositionDonut
+          earned={overview.earned}
+          spent={overview.spent}
+          saved={overview.saved}
+          currency={settings.reportingCurrency}
+        />
+        <HalfMonthSchedule
+          perPeriod={overview.perPeriod}
+          currency={settings.reportingCurrency}
+          highlightPeriod={highlightPeriod}
+        />
+        <ProjectsProgress projects={projectsView.projects} />
+      </div>
 
       <RatesNote usdToCrc={settings.rates.usdToCrc} mxnToCrc={settings.rates.mxnToCrc} />
     </div>
