@@ -35,7 +35,7 @@ test("wrong credentials show a generic error (R1)", async ({ page }) => {
   await page.getByLabel("Email").fill(OWNER_EMAIL);
   await page.getByLabel("Password").fill("definitely-wrong-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("alert")).toContainText("Invalid email or password");
+  await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });
 
 test("login, use each module, and logout", async ({ page }) => {
