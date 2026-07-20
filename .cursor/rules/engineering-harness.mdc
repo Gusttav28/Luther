@@ -1,0 +1,6 @@
+---
+description: Engineering harness entrypoint for Luther
+alwaysApply: true
+---
+
+Read `AGENTS.md` before making substantive changes. Start as the Leader role (`.agents/leader.md`). Respect source-of-truth boundaries: specs live in `specs/`, implementation evidence in `progress/current.md`, reviews in `reviews/`. Never implement without a human-approved spec package. Never commit secrets or personal financial data.

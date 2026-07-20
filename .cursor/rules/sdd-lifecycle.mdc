@@ -1,0 +1,7 @@
+---
+description: SDD lifecycle rule for harness artifacts
+globs: AGENTS.md,.agents/**/*.md,specs/**/*.md,progress/**/*.md,reviews/**/*.md
+alwaysApply: false
+---
+
+Follow the lifecycle `Backlog -> Specification -> Human Approval -> Implementation -> Review -> Human Completion`. Use the templates in `specs/_template/`. Keep requirement IDs stable after review begins. Role contracts in `.agents/*.md` are authoritative; do not duplicate them here.
