@@ -9,10 +9,13 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4">
+    <main className="flex min-h-dvh items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-brand-700">Luther</h1>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-lg font-bold text-white shadow-sm">
+            L
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-brand-600">Luther</h1>
           <p className="mt-1 text-sm text-stone-500">Personal finance, under your control.</p>
         </div>
         <form action={formAction} className="card space-y-4">

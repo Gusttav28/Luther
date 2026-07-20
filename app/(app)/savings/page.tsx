@@ -19,20 +19,18 @@ export default async function SavingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Lifetime savings</h1>
+      <h1 className="page-title">Lifetime savings</h1>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="card bg-brand-600 text-white">
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-100">
-            Lifetime balance
-          </p>
-          <p className="text-2xl font-bold tabular-nums">
+        <div className="card">
+          <p className="field-label">Lifetime balance</p>
+          <p className="text-2xl font-bold tabular-nums text-stone-900">
             <Money minor={data.balanceMinor} currency={settings.reportingCurrency} />
           </p>
         </div>
         <div className="card">
           <p className="field-label">Saved this month</p>
-          <p className="text-2xl font-bold tabular-nums">
+          <p className="text-2xl font-bold tabular-nums text-stone-900">
             <Money minor={data.monthTotalMinor} currency={settings.reportingCurrency} />
           </p>
         </div>

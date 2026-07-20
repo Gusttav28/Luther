@@ -17,7 +17,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+      <h1 className="page-title">Settings</h1>
       <SettingsForm
         usdToCrcRate={settings.rates.usdToCrc ?? ""}
         mxnToCrcRate={settings.rates.mxnToCrc ?? ""}

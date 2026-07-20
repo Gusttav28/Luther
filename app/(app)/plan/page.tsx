@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/settings";
 import { getPlanMatrix } from "@/lib/queries/plan";
@@ -24,14 +25,14 @@ export default async function PlanPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Category plan</h1>
+        <h1 className="page-title">Category plan</h1>
         <div className="flex items-center gap-2">
           <Link href={`/plan?year=${year - 1}`} aria-label="Previous year" className="btn-secondary px-2.5">
-            ‹
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden />
           </Link>
-          <span className="min-w-16 text-center text-sm font-semibold">{year}</span>
+          <span className="min-w-16 text-center text-sm font-semibold text-stone-800">{year}</span>
           <Link href={`/plan?year=${year + 1}`} aria-label="Next year" className="btn-secondary px-2.5">
-            ›
+            <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />
           </Link>
         </div>
       </div>

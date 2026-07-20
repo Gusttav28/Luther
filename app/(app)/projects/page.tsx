@@ -17,7 +17,7 @@ export default async function ProjectsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+      <h1 className="page-title">Projects</h1>
 
       <div className="card flex flex-wrap items-center justify-between gap-3">
         <div>

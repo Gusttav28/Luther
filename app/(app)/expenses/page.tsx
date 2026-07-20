@@ -46,7 +46,7 @@ export default async function ExpensesPage({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Expenses</h1>
+        <h1 className="page-title">Expenses</h1>
         <MonthPicker
           year={year}
           month={month}

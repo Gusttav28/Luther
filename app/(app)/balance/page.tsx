@@ -14,7 +14,7 @@ export default async function BalancePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Balance</h1>
+      <h1 className="page-title">Balance</h1>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="card">
@@ -26,11 +26,9 @@ export default async function BalancePage() {
             Edit in settings
           </Link>
         </div>
-        <div className="card bg-stone-900 text-white">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
-            Current balance
-          </p>
-          <p className="text-2xl font-bold tabular-nums">
+        <div className="card ring-1 ring-brand-100">
+          <p className="field-label">Current balance</p>
+          <p className="text-2xl font-bold tabular-nums text-brand-700">
             <Money minor={series.currentBalance} currency={settings.reportingCurrency} />
           </p>
         </div>

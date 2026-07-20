@@ -33,7 +33,7 @@ export default async function IncomePage({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Income</h1>
+        <h1 className="page-title">Income</h1>
         <MonthPicker year={year} month={month} basePath="/income" />
       </div>
 
