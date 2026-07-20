@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { monthName } from "@/lib/periods";
 
 /** Server-rendered month navigation via query params. */
@@ -26,13 +27,13 @@ export function MonthPicker({
   return (
     <div className="flex items-center gap-2">
       <Link href={url(prev)} aria-label="Previous month" className="btn-secondary px-2.5">
-        ‹
+        <ChevronLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden />
       </Link>
-      <span className="min-w-36 text-center text-sm font-semibold">
+      <span className="min-w-36 text-center text-sm font-semibold text-stone-800">
         {monthName(month)} {year}
       </span>
       <Link href={url(next)} aria-label="Next month" className="btn-secondary px-2.5">
-        ›
+        <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />
       </Link>
     </div>
   );

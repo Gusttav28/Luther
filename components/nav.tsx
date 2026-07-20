@@ -2,67 +2,66 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const LINKS = [
-  { href: "/", label: "Overview", icon: "◧" },
-  { href: "/income", label: "Income", icon: "↧" },
-  { href: "/expenses", label: "Expenses", icon: "↥" },
-  { href: "/plan", label: "Plan", icon: "▦" },
-  { href: "/savings", label: "Savings", icon: "◈" },
-  { href: "/balance", label: "Balance", icon: "≡" },
-  { href: "/projects", label: "Projects", icon: "★" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
-] as const;
+import { NAV_LINKS } from "@/components/icons";
 
 function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-/** Desktop sidebar links. */
+/** Desktop narrow icon sidebar. */
 export function SideNav() {
   const pathname = usePathname();
   return (
-    <nav className="space-y-1">
-      {LINKS.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-            isActive(pathname, link.href)
-              ? "bg-brand-600 text-white"
-              : "text-stone-600 hover:bg-stone-200"
-          }`}
-        >
-          <span aria-hidden className="w-4 text-center">
-            {link.icon}
-          </span>
-          {link.label}
-        </Link>
-      ))}
+    <nav className="flex flex-col items-center gap-1" aria-label="Main">
+      {NAV_LINKS.map((link) => {
+        const active = isActive(pathname, link.href);
+        const Icon = link.icon;
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            aria-label={link.label}
+            title={link.label}
+            className={`flex h-11 w-11 items-center justify-center rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 ${
+              active
+                ? "bg-brand-500 text-white shadow-sm"
+                : "text-stone-500 hover:bg-brand-50 hover:text-brand-600"
+            }`}
+          >
+            <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+          </Link>
+        );
+      })}
     </nav>
   );
 }
 
-/** Mobile bottom navigation (one-handed reach, R10). */
+/** Mobile bottom navigation with Lucide icons. */
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white/95 backdrop-blur md:hidden">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200/80 bg-white/95 backdrop-blur md:hidden"
+      aria-label="Main"
+    >
       <div className="grid grid-cols-8">
-        {LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-              isActive(pathname, link.href) ? "text-brand-600" : "text-stone-500"
-            }`}
-          >
-            <span aria-hidden className="text-base leading-none">
-              {link.icon}
-            </span>
-            {link.label}
-          </Link>
-        ))}
+        {NAV_LINKS.map((link) => {
+          const active = isActive(pathname, link.href);
+          const Icon = link.icon;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-label={link.label}
+              className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+                active ? "text-brand-600" : "text-stone-500"
+              }`}
+            >
+              <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
