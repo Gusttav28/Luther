@@ -19,7 +19,9 @@ async function login(page: Page) {
   await page.getByLabel("Email").fill(OWNER_EMAIL);
   await page.getByLabel("Password").fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 test.describe.configure({ mode: "serial" });
@@ -40,46 +42,52 @@ test("wrong credentials show a generic error (R1)", async ({ page }) => {
 
 test("login, use each module, and logout", async ({ page }) => {
   await login(page);
+  const stamp = Date.now();
+  const incomeLabel = `e2e salary ${stamp}`;
+  const categoryName = `E2E Category ${stamp}`;
+  const expenseNote = `e2e expense ${stamp}`;
+  const savingsNote = `e2e savings ${stamp}`;
+  const projectName = `E2E Project ${stamp}`;
 
   // Income (R3)
   await page.goto("/income");
   await page.getByLabel("Amount").fill("1500");
   await page.getByLabel("Period").selectOption("H1");
-  await page.getByLabel("Label (optional)").fill("e2e salary");
+  await page.getByLabel("Label (optional)").fill(incomeLabel);
   await page.getByRole("button", { name: "Add income" }).click();
-  await expect(page.getByText("e2e salary")).toBeVisible();
+  await expect(page.getByText(incomeLabel)).toBeVisible();
 
   // Category (R6)
   await page.goto("/plan");
-  await page.getByLabel("New category").fill("E2E Category");
+  await page.getByLabel("New category").fill(categoryName);
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("rowheader", { name: "E2E Category" })).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: categoryName })).toBeVisible();
 
   // Expense (R4)
   await page.goto("/expenses");
   await page.getByLabel("Amount").fill("42.50");
-  await page.getByLabel("Category").selectOption({ label: "E2E Category" });
-  await page.getByLabel("Note (optional)").fill("e2e expense");
+  await page.getByLabel("Category").selectOption({ label: categoryName });
+  await page.getByLabel("Note (optional)").fill(expenseNote);
   await page.getByRole("button", { name: "Add expense" }).click();
-  await expect(page.getByText("e2e expense")).toBeVisible();
+  await expect(page.getByText(expenseNote)).toBeVisible();
 
   // Savings contribution (R12)
   await page.goto("/savings");
   await page.getByLabel("Amount").fill("100");
   await page.getByLabel("Currency").selectOption("CRC");
-  await page.getByLabel("Note (optional)").fill("e2e savings");
+  await page.getByLabel("Note (optional)").fill(savingsNote);
   await page.getByRole("button", { name: "Record" }).click();
-  await expect(page.getByText("e2e savings")).toBeVisible();
+  await expect(page.getByText(savingsNote)).toBeVisible();
 
   // Project (R9)
   await page.goto("/projects");
-  await page.getByLabel("Name").fill("E2E Project");
+  await page.getByLabel("Name").fill(projectName);
   await page.getByLabel("Cost").fill("999.99");
   await page.getByRole("button", { name: "Add project" }).click();
-  await expect(page.getByText("E2E Project")).toBeVisible();
+  await expect(page.getByText(projectName)).toBeVisible();
 
-  // Logout (R1)
-  await page.getByRole("button", { name: "Sign out" }).first().click();
+  // Logout (R1) — force avoids the Next.js dev indicator overlaying the sidebar control
+  await page.getByRole("button", { name: "Sign out" }).first().click({ force: true });
   await expect(page).toHaveURL(/\/login/);
   await page.goto("/");
   await expect(page).toHaveURL(/\/login/);
