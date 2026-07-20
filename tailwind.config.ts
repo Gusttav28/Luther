@@ -6,18 +6,35 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#eef7f2",
-          100: "#d7ecdf",
-          200: "#b1d9c2",
-          300: "#83bf9f",
-          400: "#55a17b",
-          500: "#398662",
-          600: "#2a6b4e",
-          700: "#235640",
-          800: "#1e4535",
-          900: "#1a392d",
-          950: "#0d2019",
+          50: "#fdf5f3",
+          100: "#fce8e4",
+          200: "#f9d0c8",
+          300: "#f3a99a",
+          400: "#e97a66",
+          500: "#d95a45",
+          600: "#c44532",
+          700: "#a43828",
+          800: "#883225",
+          900: "#722e23",
+          950: "#3d1410",
         },
+        surface: {
+          DEFAULT: "#F5F6F8",
+          card: "#FFFFFF",
+        },
+        positive: {
+          DEFAULT: "#3d9b6a",
+          soft: "#e8f5ee",
+        },
+      },
+      boxShadow: {
+        card: "0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.04)",
+      },
+      borderRadius: {
+        card: "12px",
+      },
+      fontFamily: {
+        sans: ["var(--font-geist)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
     },
   },
