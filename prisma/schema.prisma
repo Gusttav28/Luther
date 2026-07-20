@@ -1,0 +1,155 @@
+// Luther data model — finance-app-mvp (spec 2026-07-20 v2)
+// All monetary amounts are integer minor units (cents/centavos/céntimos).
+// Every financial row carries userId so multi-user is not precluded (single owner in MVP).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  settings              Settings?
+  allocationSetting     AllocationSetting?
+  incomeEntries         IncomeEntry[]
+  categories            Category[]
+  planCells             PlanCell[]
+  expenses              Expense[]
+  projects              Project[]
+  projectContributions  ProjectContribution[]
+  savingsContributions  SavingsContribution[]
+}
+
+model Settings {
+  userId                   String  @id
+  // Manually maintained rates: 1 USD = usdToCrcRate CRC, 1 MXN = mxnToCrcRate CRC.
+  // Stored as decimal strings to avoid float drift; null = not set yet.
+  usdToCrcRate             String?
+  mxnToCrcRate             String?
+  reportingCurrency        String  @default("CRC") // CRC | USD | MXN
+  startingBalanceMinor     Int     @default(0)
+  startingBalanceCurrency  String  @default("CRC")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model IncomeEntry {
+  id          String  @id @default(cuid())
+  userId      String
+  year        Int
+  month       Int // 1-12
+  period      String // H1 | H2
+  amountMinor Int
+  currency    String // USD | MXN
+  label       String?
+  planned     Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, year, month])
+}
+
+model Category {
+  id       String  @id @default(cuid())
+  userId   String
+  name     String
+  archived Boolean @default(false)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planCells PlanCell[]
+  expenses  Expense[]
+
+  @@unique([userId, name])
+}
+
+model PlanCell {
+  id          String @id @default(cuid())
+  userId      String
+  categoryId  String
+  year        Int
+  month       Int // 1-12
+  amountMinor Int
+  currency    String @default("CRC")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, year, month])
+  @@index([userId, year])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  amountMinor Int
+  currency    String // USD | MXN — original currency, immutable
+  categoryId  String
+  note        String?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId, date])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  costMinor   Int
+  currency    String // CRC | USD | MXN
+  priority    Int
+  completedAt DateTime?
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions ProjectContribution[]
+
+  @@index([userId, priority])
+}
+
+model ProjectContribution {
+  id          String @id @default(cuid())
+  userId      String
+  projectId   String
+  year        Int
+  month       Int // 1-12
+  period      String // H1 | H2
+  amountMinor Int
+  currency    String
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId])
+}
+
+model AllocationSetting {
+  userId      String @id
+  // Fixed amount allocated to projects per half-month period (owner clarified: fixed, not %).
+  amountMinor Int    @default(0)
+  currency    String @default("CRC")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SavingsContribution {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  amountMinor Int // negative = withdrawal; lifetime balance never allowed below zero
+  currency    String // CRC | USD | MXN
+  note        String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
