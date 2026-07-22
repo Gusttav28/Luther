@@ -1,39 +1,40 @@
 # Luther
 
-Personal finance web application for a single owner: monthly overview, half-month income, dual-currency expenses (USD/MXN with CRC reporting), category budget plan, lifetime savings, running balance, and purchase projects.
+Personal finance web application for a single owner: monthly overview, half-month income, dual-currency expenses (USD/CRC), category budget plan, percentage-based lifetime savings and purchase projects.
 
-Built with Next.js (App Router, TypeScript), Prisma + SQLite, Auth.js (credentials), Tailwind CSS, and Zod. Governed by the spec package at `specs/finance-app-mvp/`.
+Built with Next.js (App Router, TypeScript), Prisma + **Supabase Postgres**, Auth.js (credentials), Tailwind CSS, and Zod.
 
 ## Setup
 
-Requirements: Node.js 20.12+ (developed on Node 24) and npm.
+Requirements: Node.js 20.12+ and npm. A Supabase project with Postgres.
 
 ```bash
 npm install
 cp .env.example .env
 # Fill in .env:
-#   DATABASE_URL  — keep "file:./dev.db" for local SQLite
+#   DATABASE_URL  — Supabase transaction pooler URI (port 6543, ?pgbouncer=true)
+#   DIRECT_URL    — Supabase direct URI (port 5432) for migrations
 #   AUTH_SECRET   — generate with: openssl rand -base64 32
 #   OWNER_EMAIL / OWNER_PASSWORD — your login credentials (seed only; stored hashed)
-npx prisma migrate dev   # create the database
+npx prisma db push       # or: npx prisma migrate deploy
 npm run db:seed          # create the owner account and defaults
 npm run dev              # http://localhost:3000
 ```
 
-Log in with the `OWNER_EMAIL` / `OWNER_PASSWORD` you set. The app fails fast with a clear error if required environment variables are missing. Never commit `.env` or `*.db` files (both are gitignored).
+Log in with the `OWNER_EMAIL` / `OWNER_PASSWORD` you set. Never commit `.env` or secrets.
 
 ## Using the app
 
-- **Overview** (landing page): earned / spent / saved / remaining for a month, half-month breakdown, and lifetime savings balance.
-- **Income**: entries per month and half-month period (H1 = days 1–15, H2 = 16–end), in USD or MXN.
-- **Expenses**: dated entries in USD or MXN with category and note; original currency is always preserved; converted values shown in the reporting currency.
-- **Plan**: spending categories and a category-by-month budget matrix per year with row/column/grand totals and actuals; categories with expenses can be archived, not deleted.
-- **Savings**: lifetime personal savings contributions and withdrawals (balance can never go negative); separate from project savings.
-- **Balance**: running balance per half-month period from the starting balance, income, and expenses.
-- **Projects**: purchase goals with cost and priority; a fixed per-period allocation funds them in priority order, with funded % and projected affordability dates.
-- **Settings**: USD→CRC and MXN→CRC exchange rates (manually maintained), reporting currency (CRC default), starting balance, and the per-period project allocation.
+- **Overview**: earned / spent / saved / remaining; saved follows the 70% lifetime waterfall from leftover after expenses.
+- **Income**: entries per month and half-month (H1 / H2), mark planned income for the waterfall base.
+- **Expenses**: dated entries in USD or CRC.
+- **Plan**: category-by-month budget matrix.
+- **Savings**: automatic **70%** of leftover after expenses; manual adjustments/withdrawals still available.
+- **Balance**: running balance per half-month.
+- **Projects**: cost, allocation **%** of post-lifetime leftover (max 70%), period (H1/H2/both), goal date, and one **priority** project.
+- **Settings**: USD→CRC rate, reporting currency, starting balance.
 
-All amounts are stored as integer minor units; conversions happen at read time using the current rates with CRC as the pivot currency.
+All amounts are stored as integer minor units.
 
 ## Commands
 

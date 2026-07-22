@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
+import { materializeMonthWaterfall } from "@/lib/queries/waterfall-scope";
+import { computeWaterfall } from "@/lib/waterfall";
+import { getScopeAmounts } from "@/lib/queries/waterfall-scope";
+import { getLifetimeSavingsBalance } from "@/lib/queries/overview";
 
 export interface SavingsRow {
   id: string;
@@ -7,26 +11,39 @@ export interface SavingsRow {
   amountMinor: number;
   currency: Currency;
   note: string | null;
+  source: string;
 }
 
 export interface SavingsSummary {
   contributions: SavingsRow[];
-  /** Cumulative lifetime balance in reporting currency; null when a rate is unset. */
   balanceMinor: number | null;
-  /** This month's contributions total in reporting currency. */
   monthTotalMinor: number | null;
+  leftoverMinor: number | null;
+  lifetimeTakeMinor: number | null;
+  postLifetimeMinor: number | null;
 }
 
 export async function getSavings(
   userId: string,
   reporting: Currency,
   rates: Rates,
-  monthRef?: { year: number; month: number }
+  monthRef?: { year: number; month: number },
+  options?: { skipMaterialize?: boolean; materialize?: boolean }
 ): Promise<SavingsSummary> {
-  const rows = await prisma.savingsContribution.findMany({
-    where: { userId },
-    orderBy: { date: "desc" },
-  });
+  if (
+    monthRef &&
+    (options?.materialize === true || options?.skipMaterialize === false)
+  ) {
+    await materializeMonthWaterfall(userId, monthRef.year, monthRef.month, reporting, rates);
+  }
+
+  const [rows, balanceMinor] = await Promise.all([
+    prisma.savingsContribution.findMany({
+      where: { userId },
+      orderBy: { date: "desc" },
+    }),
+    getLifetimeSavingsBalance(userId, reporting, rates),
+  ]);
 
   const contributions: SavingsRow[] = rows.map((r) => ({
     id: r.id,
@@ -34,15 +51,14 @@ export async function getSavings(
     amountMinor: r.amountMinor,
     currency: r.currency as Currency,
     note: r.note,
+    source: r.source,
   }));
 
-  const balanceMinor = sumInCurrency(
-    contributions.map((c) => ({ amountMinor: c.amountMinor, currency: c.currency })),
-    reporting,
-    rates
-  );
-
   let monthTotalMinor: number | null = 0;
+  let leftoverMinor: number | null = null;
+  let lifetimeTakeMinor: number | null = null;
+  let postLifetimeMinor: number | null = null;
+
   if (monthRef) {
     const inMonth = contributions.filter(
       (c) =>
@@ -53,15 +69,35 @@ export async function getSavings(
       reporting,
       rates
     );
+    const scope = await getScopeAmounts(
+      userId,
+      monthRef.year,
+      monthRef.month,
+      "BOTH",
+      reporting,
+      rates
+    );
+    if (scope.plannedIncomeMinor !== null && scope.expensesMinor !== null) {
+      const wf = computeWaterfall({
+        plannedIncomeMinor: scope.plannedIncomeMinor,
+        expensesMinor: scope.expensesMinor,
+      });
+      leftoverMinor = wf.leftoverMinor;
+      lifetimeTakeMinor = wf.lifetimeTakeMinor;
+      postLifetimeMinor = wf.postLifetimeMinor;
+    }
   }
 
-  return { contributions, balanceMinor, monthTotalMinor };
+  return {
+    contributions,
+    balanceMinor,
+    monthTotalMinor,
+    leftoverMinor,
+    lifetimeTakeMinor,
+    postLifetimeMinor,
+  };
 }
 
-/**
- * Lifetime balance in CRC-equivalent minor units for withdrawal validation.
- * Falls back to per-currency validation when rates are missing.
- */
 export async function wouldGoNegative(
   userId: string,
   newAmountMinor: number,
@@ -80,7 +116,6 @@ export async function wouldGoNegative(
   ];
   const total = sumInCurrency(all, "CRC", rates);
   if (total !== null) return total < 0;
-  // Rates missing: validate within the withdrawal's own currency.
   const sameCurrency = all
     .filter((r) => r.currency === newCurrency)
     .reduce((acc, r) => acc + r.amountMinor, 0);

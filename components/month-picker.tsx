@@ -1,8 +1,11 @@
-import Link from "next/link";
+"use client";
+
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { monthName } from "@/lib/periods";
 
-/** Server-rendered month navigation via query params. */
+/** Client month navigation that preserves scroll position. */
 export function MonthPicker({
   year,
   month,
@@ -14,8 +17,11 @@ export function MonthPicker({
   basePath: string;
   extraParams?: Record<string, string>;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
   const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+
   const url = (m: { year: number; month: number }) => {
     const params = new URLSearchParams({
       ...extraParams,
@@ -24,17 +30,37 @@ export function MonthPicker({
     });
     return `${basePath}?${params.toString()}`;
   };
+
+  function go(target: { year: number; month: number }) {
+    if (pending) return;
+    startTransition(() => {
+      router.push(url(target), { scroll: false });
+    });
+  }
+
   return (
     <div className="flex items-center gap-2">
-      <Link href={url(prev)} aria-label="Previous month" className="btn-secondary px-2.5">
+      <button
+        type="button"
+        aria-label="Previous month"
+        disabled={pending}
+        onClick={() => go(prev)}
+        className="btn-secondary px-2.5 disabled:opacity-70"
+      >
         <ChevronLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-      </Link>
-      <span className="min-w-36 text-center text-sm font-semibold text-stone-800">
+      </button>
+      <span className="min-w-36 text-center text-sm font-semibold text-ink">
         {monthName(month)} {year}
       </span>
-      <Link href={url(next)} aria-label="Next month" className="btn-secondary px-2.5">
+      <button
+        type="button"
+        aria-label="Next month"
+        disabled={pending}
+        onClick={() => go(next)}
+        className="btn-secondary px-2.5 disabled:opacity-70"
+      >
         <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-      </Link>
+      </button>
     </div>
   );
 }

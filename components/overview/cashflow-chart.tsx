@@ -34,24 +34,24 @@ export function CashflowChart({
   return (
     <section className="card h-full min-h-[280px]">
       <h2 className="section-title mb-1">Cashflow</h2>
-      <p className="mb-4 text-xs text-stone-500">Cumulative earned vs spent this month</p>
+      <p className="mb-4 text-xs text-ink-muted">Cumulative earned vs spent this month</p>
       {empty ? (
-        <div className="flex h-48 items-center justify-center rounded-lg bg-stone-50 text-sm text-stone-400">
+        <div className="flex h-48 items-center justify-center rounded-lg surface-muted text-sm text-ink-faint">
           No cashflow data for this month yet.
         </div>
       ) : (
         <div className="h-56 w-full min-w-0 overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: "#78716c", fontSize: 12 }}
+                tick={{ fill: "var(--chart-text)", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: "#78716c", fontSize: 10 }}
+                tick={{ fill: "var(--chart-text)", fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
                 width={48}
@@ -68,28 +68,32 @@ export function CashflowChart({
                 }
                 contentStyle={{
                   borderRadius: 12,
-                  border: "1px solid #e7e5e4",
-                  boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
+                  background: "var(--chart-surface)",
+                  border: "1px solid var(--chart-border)",
+                  color: "var(--chart-text)",
+                  boxShadow: "0 4px 16px rgb(0 0 0 / 0.18)",
                 }}
+                labelStyle={{ color: "var(--chart-text)" }}
+                itemStyle={{ color: "var(--chart-text)" }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ color: "var(--chart-text)", fontSize: 12 }} />
               <Line
                 type="monotone"
                 dataKey="cumulativeNet"
                 name="Net"
-                stroke="#d95a45"
+                stroke="var(--chart-accent)"
                 strokeWidth={2.5}
-                dot={{ r: 4, fill: "#d95a45" }}
+                dot={{ r: 4, fill: "var(--chart-accent)" }}
                 connectNulls
               />
               <Line
                 type="monotone"
                 dataKey="cumulativeSpent"
                 name="Spent"
-                stroke="#a8a29e"
+                stroke="#737373"
                 strokeWidth={2}
                 strokeDasharray="4 4"
-                dot={{ r: 3, fill: "#a8a29e" }}
+                dot={{ r: 3, fill: "#737373" }}
                 connectNulls
               />
             </LineChart>

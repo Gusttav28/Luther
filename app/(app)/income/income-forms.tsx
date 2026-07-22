@@ -3,21 +3,22 @@
 import { useActionState, useEffect, useState } from "react";
 import { createIncomeAction, updateIncomeAction, deleteIncomeAction } from "./actions";
 import { initialActionState } from "@/lib/action-state";
-import { formatMinor, type Currency } from "@/lib/money";
+import { formatMinor, CURRENCY_LABELS, type Currency } from "@/lib/money";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { IncomeRow } from "@/lib/queries/income";
 
-const ENTRY_CURRENCIES: Currency[] = ["USD", "MXN"];
+const ENTRY_CURRENCIES: Currency[] = ["CRC", "USD"];
 
 export function AddIncomeForm({ year, month }: { year: number; month: number }) {
-  const [state, formAction, pending] = useActionState(createIncomeAction, initialActionState);
+  const [state, formAction] = useActionState(createIncomeAction, initialActionState);
   return (
     <form action={formAction} className="card space-y-3">
       <h2 className="text-base font-semibold">Add income</h2>
       <input type="hidden" name="year" value={year} />
       <input type="hidden" name="month" value={month} />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div>
-          <label htmlFor="income-period" className="field-label">
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-4">
+        <div className="min-w-0">
+          <label htmlFor="income-period" className="field-label whitespace-nowrap">
             Period
           </label>
           <select id="income-period" name="period" className="field-input" defaultValue="H1">
@@ -26,8 +27,8 @@ export function AddIncomeForm({ year, month }: { year: number; month: number }) 
           </select>
           {state.errors?.period && <p className="error-text">{state.errors.period}</p>}
         </div>
-        <div>
-          <label htmlFor="income-amount" className="field-label">
+        <div className="min-w-0">
+          <label htmlFor="income-amount" className="field-label whitespace-nowrap">
             Amount
           </label>
           <input
@@ -39,20 +40,20 @@ export function AddIncomeForm({ year, month }: { year: number; month: number }) 
           />
           {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
         </div>
-        <div>
-          <label htmlFor="income-currency" className="field-label">
+        <div className="min-w-0">
+          <label htmlFor="income-currency" className="field-label whitespace-nowrap">
             Currency
           </label>
-          <select id="income-currency" name="currency" className="field-input" defaultValue="USD">
+          <select id="income-currency" name="currency" className="field-input" defaultValue="CRC">
             {ENTRY_CURRENCIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {CURRENCY_LABELS[c]}
               </option>
             ))}
           </select>
         </div>
-        <div>
-          <label htmlFor="income-label" className="field-label">
+        <div className="min-w-0">
+          <label htmlFor="income-label" className="field-label whitespace-nowrap">
             Label (optional)
           </label>
           <input id="income-label" name="label" className="field-input" placeholder="Source" />
@@ -63,9 +64,11 @@ export function AddIncomeForm({ year, month }: { year: number; month: number }) 
         Planned (not yet received)
       </label>
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
-      <button type="submit" disabled={pending} className="btn-primary">
-        {pending ? "Adding…" : "Add income"}
-      </button>
+      <PendingSubmitButton
+        idle="Add income"
+        className="btn-primary min-w-[7rem]"
+        pendingLabel="Adding"
+      />
     </form>
   );
 }
@@ -81,7 +84,7 @@ function EditIncomeForm({
   month: number;
   onDone: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(updateIncomeAction, initialActionState);
+  const [state, formAction] = useActionState(updateIncomeAction, initialActionState);
   useEffect(() => {
     if (state.ok) onDone();
   }, [state.ok, onDone]);
@@ -112,7 +115,7 @@ function EditIncomeForm({
       >
         {ENTRY_CURRENCIES.map((c) => (
           <option key={c} value={c}>
-            {c}
+            {CURRENCY_LABELS[c]}
           </option>
         ))}
       </select>
@@ -132,9 +135,7 @@ function EditIncomeForm({
           />
           Planned
         </label>
-        <button type="submit" disabled={pending} className="btn-primary px-3 py-1.5">
-          Save
-        </button>
+        <PendingSubmitButton idle="Save" className="btn-primary min-w-[4.5rem] px-3 py-1.5" pendingLabel="Saving" />
         <button type="button" onClick={onDone} className="btn-secondary">
           Cancel
         </button>
@@ -185,9 +186,11 @@ export function IncomeEntryRow({
         </button>
         <form action={deleteIncomeAction}>
           <input type="hidden" name="id" value={entry.id} />
-          <button type="submit" className="btn-danger px-2 py-1 text-xs">
-            Delete
-          </button>
+          <PendingSubmitButton
+            idle="Delete"
+            className="btn-danger min-w-[3.5rem] px-2 py-1 text-xs"
+            pendingLabel="Deleting"
+          />
         </form>
       </div>
     </li>

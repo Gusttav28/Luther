@@ -33,10 +33,13 @@ export async function getBalanceSeries(
   const { reportingCurrency: reporting, rates } = settings;
 
   const [income, expenses] = await Promise.all([
-    prisma.incomeEntry.findMany({ where: { userId, planned: false } }),
+    prisma.incomeEntry.findMany({
+      where: { userId, planned: false },
+      select: { amountMinor: true, currency: true, year: true, month: true, period: true },
+    }),
     prisma.expense.findMany({
       select: { amountMinor: true, currency: true, date: true },
-      where: { userId },
+      where: { userId, completed: true },
     }),
   ]);
 

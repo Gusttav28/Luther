@@ -1,8 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import { SideNav, BottomNav } from "@/components/nav";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LutherLogo } from "@/components/logo";
 import { LogOut } from "@/components/icons";
+import { AppCacheProvider } from "@/components/app-cache-provider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -11,16 +13,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const initial = (session.user.name?.[0] ?? session.user.email?.[0] ?? "L").toUpperCase();
 
   return (
-    <div className="min-h-dvh md:flex">
-      {/* Desktop narrow icon sidebar */}
-      <aside className="hidden w-[72px] shrink-0 flex-col items-center border-r border-stone-200/80 bg-white py-4 md:flex">
-        <LinkMark />
-        <div className="mt-6 flex-1">
+    <div className="min-h-dvh bg-surface md:flex md:h-dvh md:overflow-hidden">
+      {/* Desktop narrow icon sidebar — fixed while main content scrolls */}
+      <aside className="hidden h-dvh w-[72px] shrink-0 flex-col items-center border-r border-line bg-surface-card py-4 md:flex">
+        <div className="mb-2 flex h-14 w-full shrink-0 items-center justify-center">
+          <LutherLogo size="md" priority />
+        </div>
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <SideNav />
         </div>
         <div className="mt-auto flex flex-col items-center gap-3">
+          <ThemeToggle compact />
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-950 dark:bg-brand-800 dark:text-white"
             aria-hidden
           >
             {initial}
@@ -35,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               type="submit"
               aria-label="Sign out"
               title="Sign out"
-              className="flex h-11 w-11 items-center justify-center rounded-xl text-stone-500 transition hover:bg-stone-100 hover:text-stone-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-muted transition hover:bg-surface-muted hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 dark:ring-offset-neutral-950"
             >
               <LogOut aria-hidden className="h-5 w-5" strokeWidth={1.75} />
             </button>
@@ -44,8 +49,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Mobile header */}
-      <header className="flex items-center justify-between border-b border-stone-200/80 bg-white px-4 py-3 md:hidden">
-        <span className="text-lg font-bold tracking-tight text-brand-600">Luther</span>
+      <header className="flex items-center justify-between border-b border-line bg-surface-card px-4 py-3 md:hidden">
+        <div className="flex items-center gap-2.5">
+          <LutherLogo size="sm" />
+          <span className="text-lg font-bold tracking-tight text-brand-950 dark:text-brand-300">
+            Luther
+          </span>
+        </div>
         <form
           action={async () => {
             "use server";
@@ -54,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         >
           <button
             type="submit"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500"
+            className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 dark:ring-offset-neutral-950"
           >
             <LogOut aria-hidden className="h-4 w-4" strokeWidth={1.75} />
             Sign out
@@ -62,23 +72,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </form>
       </header>
 
-      <main className="w-full min-w-0 flex-1 overflow-x-hidden px-4 py-6 pb-24 md:px-8 md:pb-8 lg:px-10">
-        {children}
+      <main className="w-full min-w-0 flex-1 overflow-x-hidden px-4 py-6 pb-24 md:h-dvh md:overflow-y-auto md:px-8 md:pb-8 lg:px-10">
+        <AppCacheProvider>{children}</AppCacheProvider>
       </main>
 
       <BottomNav />
     </div>
-  );
-}
-
-function LinkMark() {
-  return (
-    <Link
-      href="/"
-      aria-label="Luther Overview"
-      className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-sm font-bold tracking-tight text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
-    >
-      L
-    </Link>
   );
 }

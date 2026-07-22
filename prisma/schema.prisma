@@ -1,4 +1,4 @@
-// Luther data model — finance-app-mvp (spec 2026-07-20 v2)
+// Luther data model — percentage-savings-projects (spec 2026-07-21)
 // All monetary amounts are integer minor units (cents/centavos/céntimos).
 // Every financial row carries userId so multi-user is not precluded (single owner in MVP).
 
@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -17,26 +18,23 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  settings              Settings?
-  allocationSetting     AllocationSetting?
-  incomeEntries         IncomeEntry[]
-  categories            Category[]
-  planCells             PlanCell[]
-  expenses              Expense[]
-  projects              Project[]
-  projectContributions  ProjectContribution[]
-  savingsContributions  SavingsContribution[]
+  settings             Settings?
+  incomeEntries        IncomeEntry[]
+  categories           Category[]
+  planCells            PlanCell[]
+  expenses             Expense[]
+  projects             Project[]
+  projectContributions ProjectContribution[]
+  savingsContributions SavingsContribution[]
 }
 
 model Settings {
-  userId                   String  @id
-  // Manually maintained rates: 1 USD = usdToCrcRate CRC, 1 MXN = mxnToCrcRate CRC.
-  // Stored as decimal strings to avoid float drift; null = not set yet.
-  usdToCrcRate             String?
-  mxnToCrcRate             String?
-  reportingCurrency        String  @default("CRC") // CRC | USD | MXN
-  startingBalanceMinor     Int     @default(0)
-  startingBalanceCurrency  String  @default("CRC")
+  userId                  String  @id
+  // Manually maintained rate: 1 USD = usdToCrcRate CRC. Stored as decimal string; null = not set.
+  usdToCrcRate            String?
+  reportingCurrency       String  @default("CRC") // CRC | USD
+  startingBalanceMinor    Int     @default(0)
+  startingBalanceCurrency String  @default("CRC")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -48,7 +46,7 @@ model IncomeEntry {
   month       Int // 1-12
   period      String // H1 | H2
   amountMinor Int
-  currency    String // USD | MXN
+  currency    String // CRC | USD
   label       String?
   planned     Boolean @default(false)
 
@@ -91,9 +89,11 @@ model Expense {
   userId      String
   date        DateTime
   amountMinor Int
-  currency    String // USD | MXN — original currency, immutable
+  currency    String // CRC | USD — original currency, immutable
   categoryId  String
-  note        String?
+  name        String?
+  /// Paid/done — only completed expenses count toward spent totals (default true preserves history)
+  completed   Boolean  @default(true)
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -102,18 +102,27 @@ model Expense {
 }
 
 model Project {
-  id          String    @id @default(cuid())
-  userId      String
-  name        String
-  costMinor   Int
-  currency    String // CRC | USD | MXN
-  priority    Int
-  completedAt DateTime?
+  id                String    @id @default(cuid())
+  userId            String
+  name              String
+  costMinor         Int
+  currency          String // CRC | USD
+  priority          Int
+  /// 1–70: percent of post-lifetime leftover (R3)
+  allocationPercent Int       @default(50)
+  /// H1 | H2 | BOTH
+  periodMode        String    @default("BOTH")
+  goalDate          DateTime?
+  /// Optional product/page URL for the purchase goal
+  link              String?
+  isPriority        Boolean   @default(false)
+  completedAt       DateTime?
 
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   contributions ProjectContribution[]
 
   @@index([userId, priority])
+  @@index([userId, isPriority])
 }
 
 model ProjectContribution {
@@ -125,20 +134,14 @@ model ProjectContribution {
   period      String // H1 | H2
   amountMinor Int
   currency    String
+  /// waterfall = auto from income/expenses; manual = legacy/adjustment
+  source      String @default("waterfall")
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, projectId, year, month, period, source])
   @@index([userId, projectId])
-}
-
-model AllocationSetting {
-  userId      String @id
-  // Fixed amount allocated to projects per half-month period (owner clarified: fixed, not %).
-  amountMinor Int    @default(0)
-  currency    String @default("CRC")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SavingsContribution {
@@ -146,10 +149,16 @@ model SavingsContribution {
   userId      String
   date        DateTime
   amountMinor Int // negative = withdrawal; lifetime balance never allowed below zero
-  currency    String // CRC | USD | MXN
+  currency    String // CRC | USD
   note        String?
+  /// waterfall = auto 70% take; adjustment = manual R9
+  source      String   @default("adjustment")
+  year        Int?
+  month       Int?
+  period      String? // H1 | H2 when source=waterfall
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+  @@unique([userId, year, month, period, source])
 }

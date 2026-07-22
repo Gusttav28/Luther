@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
@@ -65,10 +66,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 });
 
-/** The authenticated owner's user id; throws if there is no session. */
+/** The authenticated owner's user id; clears a stale session then sends to login. */
+const verifiedUsers = new Map<string, number>();
+const VERIFY_TTL_MS = 5 * 60_000;
+
 export async function requireUserId(): Promise<string> {
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-  return userId;
+  if (!userId) redirect("/login");
+
+  const last = verifiedUsers.get(userId);
+  if (last && Date.now() - last < VERIFY_TTL_MS) {
+    return userId;
+  }
+
+  // After migrating to Supabase, an old JWT may still carry a SQLite user id.
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+  if (!user) {
+    verifiedUsers.delete(userId);
+    redirect("/signout");
+  }
+
+  verifiedUsers.set(userId, Date.now());
+  return user.id;
 }

@@ -6,5 +6,8 @@ import { authConfig } from "./lib/auth.config";
 export default NextAuth(authConfig).auth;
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  // Public marks/favicons must bypass auth — otherwise sidebar & tab icons 307 to /login.
+  matcher: [
+    "/((?!api/auth|_next/static|_next/image|favicon\\.ico|icon(?:\\.png)?$|apple-icon|.*\\.(?:png|jpg|jpeg|gif|webp|ico|svg)$).*)",
+  ],
 };

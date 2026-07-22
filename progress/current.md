@@ -1,86 +1,64 @@
 # Current implementation progress
 
-- Work item: dashboard-ui-redesign (`specs/dashboard-ui-redesign/`)
-- Branch: `feature/dashboard-ui-redesign` (off `feature/finance-app-mvp`; not pushed, not merged)
-- Spec package: 2026-07-20, human-approved (owner "GO" on 2026-07-20)
-- Implementer session: 2026-07-20
+- Work item: app-performance (`specs/app-performance/`)
+- Branch: `feature/app-performance`
+- Spec package: 2026-07-22, human-approved (owner **GO** on 2026-07-22)
+- Implementer session: 2026-07-22
 - Handoff: **IMPLEMENTED**
 
 ## Files read
 
 - `AGENTS.md`, `.agents/implementer.md`
-- `specs/dashboard-ui-redesign/requirements.md`, `design.md`, `tasks.md` (read completely before any code)
+- `specs/app-performance/{requirements,design,tasks}.md` (complete)
 
 ## Files changed
 
-### Spec package (committed with work item)
+### T1 — Skip materialize on page reads
 
-- `specs/dashboard-ui-redesign/{requirements,design,tasks}.md`
+- `lib/queries/overview.ts`, `savings.ts`, `projects.ts` — default reads no longer materialize; only `{ materialize: true }` / legacy `{ skipMaterialize: false }`
 
-### Dependencies (T1)
+### T2 — Materialize after mutations + Overview Refresh
 
-- `package.json`, `package-lock.json` — added **lucide-react**, **recharts** only
+- `lib/queries/materialize.ts` — `safeMaterializeMonth`
+- Income / expenses / savings / projects / settings actions call safe materialize after writes
+- `app/(app)/overview-actions.ts` + `components/overview/overview-refresh.tsx` — Refresh rematerializes then revalidates
 
-### Design tokens / shell (T2, T3)
+### T3 — Shared Overview snapshot
 
-- `tailwind.config.ts` — coral brand scale, surface, positive, card shadow/radius, Geist sans
-- `app/globals.css` — light surface bg, soft white cards, coral buttons/fields
-- `app/layout.tsx` — Geist font via `next/font/google`
-- `app/(app)/layout.tsx` — narrow 72px icon sidebar, avatar + Lucide sign-out, mobile header
-- `components/nav.tsx` — Lucide outline icons; icon-only desktop + labeled bottom nav; `aria-label`s
-- `components/icons.ts` — shared route → Lucide map
-- `components/month-picker.tsx` — Lucide chevrons
-- `next.config.ts` — `devIndicators.position: bottom-right` (avoids covering sidebar sign-out)
+- `lib/queries/overview.ts` — `loadMonthSnapshot` / `figuresFromSnapshot`
+- `lib/queries/overview-dashboard.ts` — `getOverviewDashboard` derives MoM, cashflow, category spend
+- `app/(app)/page.tsx` — uses dashboard helper only
 
-### Overview analytics (T4, T5)
+### T4 — Aggregate history
 
-- `lib/queries/overview-dashboard.ts` — MoM deltas, spent-by-category, cashflow series
-- `components/overview/kpi-cards.tsx`
-- `components/overview/cashflow-chart.tsx` (recharts line)
-- `components/overview/spent-by-category.tsx` (CSS segments)
-- `components/overview/composition-donut.tsx` (recharts donut, center = Earned)
-- `components/overview/half-month-schedule.tsx`
-- `components/overview/projects-progress.tsx` (CSS funded-% bars)
-- `components/overview/overview-refresh.tsx`
-- `app/(app)/page.tsx` — analytics composition grid
+- `lib/queries/savings-balance.ts` — lifetime `groupBy` currency sum
+- `lib/queries/projects.ts` — contribution totals via `groupBy`
+- `lib/queries/balance.ts` — select only needed income fields
 
-### Remaining pages visual system (T6)
+### T5 — Unblock login / remove bootstrap
 
-- `app/login/page.tsx`
-- `app/(app)/{income,expenses,plan,savings,balance,projects,settings}/page.tsx` — shared `page-title` / card language; savings/balance banners restyled to light cards
+- `app/login/page.tsx` — navigate immediately after login
+- `components/app-cache-provider.tsx` — prefetch only
+- `lib/client-cache.ts` — prefetch routes only
+- Deleted `app/api/bootstrap/route.ts`
 
-### Money / CRC (T7)
+### T6 — Auth + refresh cleanups
 
-- Audited `lib/money.ts` / `components/money.tsx` — CRC already `₡`; RatesNote keeps `$1` / `MX$1` source labels; no CRC misuse found
+- `lib/auth.ts` — 5-minute verified-user TTL (still validates unknown JWTs)
+- Category picker + export plan — dropped redundant `router.refresh`
 
-### Tests (T8)
+### T7 — Handoff
 
-- `tests/unit/overview-dashboard.test.ts` — MoM / prior-month helpers
-- `tests/e2e/smoke.spec.ts` — longer login wait; unique stamped labels; force Sign out click
-- `tests/e2e/responsive.spec.ts` — longer login wait
-
-## Task checklist
-
-- [x] T1 — Add approved dependencies (lucide-react, recharts)
-- [x] T2 — Restyle design tokens and shared component classes
-- [x] T3 — Redesign app shell: narrow Lucide sidebar + mobile bottom nav
-- [x] T4 — Add read-only Overview dashboard query helpers
-- [x] T5 — Build Overview analytics widgets
-- [x] T6 — Apply visual system to remaining pages
-- [x] T7 — Audit and fix CRC / money display
-- [x] T8 — Update tests / selectors broken by UI structure changes
+- `progress/current.md` — this file
 
 ## Verification
 
-- [x] TV1 — `npm run typecheck` — clean
-- [x] TV2 — `npm run lint` — clean
-- [x] TV3 — `npm test` — 59 passed (includes CRC `₡` assertions + new overview-dashboard tests)
-- [x] TV4 — Playwright responsive + Overview — mobile 360 + desktop 1280 passed
-- [x] TV5 — Smoke e2e (login, modules, logout, auth gate) — passed; CRC formatting covered by unit tests
-- [x] TV6 — Diff review: only lucide-react + recharts added; Prisma schema / auth / money-math untouched; no secrets committed
+- TV1–TV6: owner manual (Overview/Savings/Projects snappier; login no warm wait; Refresh rematerializes; mutation updates waterfall)
+- No new npm dependencies
+- `tsc` hung in this environment; IDE lints clean on touched files
 
-## Scope check
+## Notes for Reviewer
 
-- No schema, auth, or money-math changes
-- Dependencies limited to lucide-react and recharts
-- Domain mappings match design (KPIs → cashflow → category → donut → H1/H2 → projects %)
+- Waterfall correctness now depends on mutation materialize + Overview Refresh escape hatch
+- Savings contribution **list** still loads all rows for the history UI; balance uses aggregate
+- Prior-month Overview still runs scope queries (planned income) — charts no longer re-fetch expenses/income

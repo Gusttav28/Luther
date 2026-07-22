@@ -31,8 +31,8 @@ export const signedAmountSchema = z
     v.startsWith("-") ? -parseAmountToMinor(v.slice(1))! : parseAmountToMinor(v)!
   );
 
-export const entryCurrencySchema = z.enum(["USD", "MXN"]);
-export const anyCurrencySchema = z.enum(["CRC", "USD", "MXN"]);
+export const entryCurrencySchema = z.enum(["CRC", "USD"]);
+export const anyCurrencySchema = z.enum(["CRC", "USD"]);
 export const periodSchema = z.enum(["H1", "H2"]);
 export const yearSchema = z.coerce.number().int().min(2000).max(2100);
 export const monthSchema = z.coerce.number().int().min(1).max(12);
@@ -60,13 +60,27 @@ export const incomeEntrySchema = z.object({
   planned: z.coerce.boolean().default(false),
 });
 
-export const expenseSchema = z.object({
-  date: isoDateSchema,
-  amount: amountSchema,
-  currency: entryCurrencySchema,
-  categoryId: z.string().min(1, "Choose a category"),
-  note: z.string().trim().max(300).optional().or(z.literal("").transform(() => undefined)),
-});
+export const expenseSchema = z
+  .object({
+    date: isoDateSchema,
+    amount: amountSchema,
+    currency: entryCurrencySchema,
+    name: z.string().trim().min(1, "Name is required").max(120),
+    categoryId: z
+      .string()
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    categoryName: z
+      .string()
+      .trim()
+      .max(60)
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+  })
+  .refine((data) => data.categoryId || data.categoryName, {
+    message: "Choose or type a category name",
+    path: ["categoryName"],
+  });
 
 export const categorySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60),
@@ -90,6 +104,26 @@ export const projectSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   cost: amountSchema,
   currency: anyCurrencySchema,
+  allocationPercent: z.coerce
+    .number()
+    .int()
+    .min(1, "Enter a percent from 1 to 70")
+    .max(70, "Maximum is 70% of leftover after lifetime savings"),
+  periodMode: z.enum(["H1", "H2", "BOTH"]),
+  goalDate: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? undefined : v))
+    .pipe(z.union([z.undefined(), isoDateSchema])),
+  link: z
+    .string()
+    .trim()
+    .max(2000)
+    .transform((v) => (v === "" ? undefined : v))
+    .refine((v) => v === undefined || /^https?:\/\/.+/i.test(v), {
+      message: "Enter a valid link starting with http:// or https://",
+    }),
+  isPriority: z.coerce.boolean().default(false),
 });
 
 export const savingsContributionSchema = z.object({
@@ -101,11 +135,6 @@ export const savingsContributionSchema = z.object({
 
 export const settingsSchema = z.object({
   usdToCrcRate: z
-    .string()
-    .trim()
-    .refine((v) => v === "" || isValidRate(v), { message: "Enter a positive rate" })
-    .transform((v) => (v === "" ? null : v)),
-  mxnToCrcRate: z
     .string()
     .trim()
     .refine((v) => v === "" || isValidRate(v), { message: "Enter a positive rate" })

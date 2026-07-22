@@ -24,17 +24,8 @@ export function Money({
   return <span className={className}>{formatMinor(minor, currency)}</span>;
 }
 
-/** Small annotation showing the rates in effect for converted totals (R5). */
-export function RatesNote({
-  usdToCrc,
-  mxnToCrc,
-}: {
-  usdToCrc: string | null;
-  mxnToCrc: string | null;
-}) {
-  const parts: string[] = [];
-  if (usdToCrc) parts.push(`$1 = ₡${usdToCrc}`);
-  if (mxnToCrc) parts.push(`MX$1 = ₡${mxnToCrc}`);
-  if (parts.length === 0) return null;
-  return <p className="text-xs text-stone-400">Rates: {parts.join(" · ")}</p>;
+/** Small annotation showing the USD→CRC rate in effect for converted totals. */
+export function RatesNote({ usdToCrc }: { usdToCrc: string | null }) {
+  if (!usdToCrc) return null;
+  return <p className="text-xs text-ink-faint">Rate: $1 = ₡{usdToCrc}</p>;
 }

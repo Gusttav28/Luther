@@ -1,30 +1,32 @@
 /**
  * Money handling (R4, R5, R11).
  *
- * All amounts are integer minor units (2 fraction digits for CRC, USD, MXN).
- * Conversion among the three currencies uses CRC as the pivot with the two
- * manually maintained rates (1 USD = usdToCrc CRC, 1 MXN = mxnToCrc CRC).
- * Rates are decimal strings; conversion is done in integer math to avoid drift.
+ * All amounts are integer minor units (2 fraction digits for CRC and USD).
+ * Conversion uses CRC as the pivot with one manually maintained rate
+ * (1 USD = usdToCrc CRC). Rates are decimal strings; conversion uses integer math.
  * Converted values are computed at read time and never persisted.
  */
 
-export const CURRENCIES = ["CRC", "USD", "MXN"] as const;
+export const CURRENCIES = ["CRC", "USD"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
-export const ENTRY_CURRENCIES = ["USD", "MXN"] as const;
+export const ENTRY_CURRENCIES = ["CRC", "USD"] as const;
 export type EntryCurrency = (typeof ENTRY_CURRENCIES)[number];
 
 export interface Rates {
   /** 1 USD = usdToCrc CRC, as a decimal string (e.g. "512.35"). Null = not set. */
   usdToCrc: string | null;
-  /** 1 MXN = mxnToCrc CRC, as a decimal string. Null = not set. */
-  mxnToCrc: string | null;
 }
 
 const CURRENCY_SYMBOLS: Record<Currency, string> = {
   CRC: "₡",
   USD: "$",
-  MXN: "MX$",
+};
+
+/** Human-readable labels for currency selectors. */
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  CRC: "₡ Colones",
+  USD: "$ Dollars",
 };
 
 /** Parse a decimal string like "512.35" into an exact rational {num, den}. */
@@ -54,8 +56,8 @@ function divRound(num: bigint, den: bigint): bigint {
 }
 
 export class MissingRateError extends Error {
-  constructor(public readonly currency: EntryCurrency) {
-    super(`Exchange rate for ${currency}→CRC is not set`);
+  constructor() {
+    super("Exchange rate for USD→CRC is not set");
     this.name = "MissingRateError";
   }
 }
@@ -63,15 +65,14 @@ export class MissingRateError extends Error {
 /** Rate needed to express `currency` in CRC. CRC itself needs none. */
 function rateToCrc(currency: Currency, rates: Rates): { num: bigint; den: bigint } {
   if (currency === "CRC") return { num: 1n, den: 1n };
-  const raw = currency === "USD" ? rates.usdToCrc : rates.mxnToCrc;
-  const parsed = raw ? parseDecimal(raw) : null;
-  if (!parsed) throw new MissingRateError(currency);
+  const parsed = rates.usdToCrc ? parseDecimal(rates.usdToCrc) : null;
+  if (!parsed) throw new MissingRateError();
   return parsed;
 }
 
 /**
  * Convert integer minor units between currencies via the CRC pivot.
- * Throws MissingRateError when a required rate is unset.
+ * Throws MissingRateError when USD conversion is needed but the rate is unset.
  */
 export function convertMinor(
   amountMinor: number,
@@ -82,23 +83,19 @@ export function convertMinor(
   if (from === to) return amountMinor;
   const fromRate = rateToCrc(from, rates);
   const toRate = rateToCrc(to, rates);
-  // amount * (from→CRC) / (to→CRC)
   const num = BigInt(amountMinor) * fromRate.num * toRate.den;
   const den = fromRate.den * toRate.num;
   return Number(divRound(num, den));
 }
 
-/** Which entry currencies lack a stored rate (needed for "set exchange rate" prompts). */
-export function missingRates(rates: Rates): EntryCurrency[] {
-  const missing: EntryCurrency[] = [];
-  if (!rates.usdToCrc || !isValidRate(rates.usdToCrc)) missing.push("USD");
-  if (!rates.mxnToCrc || !isValidRate(rates.mxnToCrc)) missing.push("MXN");
-  return missing;
+/** True when USD→CRC rate is missing (needed for cross-currency totals). */
+export function missingRates(rates: Rates): boolean {
+  return !rates.usdToCrc || !isValidRate(rates.usdToCrc);
 }
 
 /**
  * Sum a list of (amountMinor, currency) into the reporting currency.
- * Returns null if any needed rate is missing (caller renders a prompt instead of a number).
+ * Returns null if any needed rate is missing.
  */
 export function sumInCurrency(
   amounts: Array<{ amountMinor: number; currency: Currency }>,
@@ -108,7 +105,7 @@ export function sumInCurrency(
   let total = 0;
   for (const { amountMinor, currency } of amounts) {
     try {
-      total += convertMinor(amountMinor, currency as Currency, reporting, rates);
+      total += convertMinor(amountMinor, currency, reporting, rates);
     } catch (error) {
       if (error instanceof MissingRateError) return null;
       throw error;

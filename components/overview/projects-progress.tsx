@@ -9,15 +9,15 @@ export function ProjectsProgress({ projects }: { projects: ProjectView[] }) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <div>
           <h2 className="section-title">Projects funded</h2>
-          <p className="mt-0.5 text-xs text-stone-500">Active purchase goals</p>
+          <p className="mt-0.5 text-xs text-ink-muted">Active purchase goals</p>
         </div>
-        <Link href="/projects" className="text-xs font-medium text-brand-600 hover:underline">
+        <Link href="/projects" className="semantic-link text-xs font-medium">
           View all
         </Link>
       </div>
 
       {active.length === 0 ? (
-        <div className="flex h-32 items-center justify-center rounded-lg bg-stone-50 text-sm text-stone-400">
+        <div className="flex h-32 items-center justify-center rounded-lg surface-muted text-sm text-ink-faint">
           No active projects.
         </div>
       ) : (
@@ -30,14 +30,14 @@ export function ProjectsProgress({ projects }: { projects: ProjectView[] }) {
             return (
               <li key={project.id}>
                 <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate font-medium text-stone-800">{project.name}</span>
-                  <span className="shrink-0 tabular-nums text-stone-500">
+                  <span className="truncate font-medium text-ink">{project.name}</span>
+                  <span className="shrink-0 tabular-nums text-ink-muted">
                     {pct === null ? "—" : `${pct}%`}
                   </span>
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-stone-100">
+                <div className="h-2.5 overflow-hidden rounded-full surface-muted">
                   <div
-                    className="h-full rounded-full bg-brand-500 transition-all"
+                    className="h-full rounded-full bg-brand-700 transition-all dark:bg-brand-500"
                     style={{ width: `${pct ?? 0}%` }}
                     role="progressbar"
                     aria-valuenow={pct ?? undefined}

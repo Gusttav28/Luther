@@ -1,13 +1,6 @@
 import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/settings";
-import { getOverview } from "@/lib/queries/overview";
-import { getProjectsView } from "@/lib/queries/projects";
-import {
-  computeMomDeltas,
-  getCashflowSeries,
-  getSpentByCategory,
-  priorMonth,
-} from "@/lib/queries/overview-dashboard";
+import { getOverviewDashboard, computeMomDeltas } from "@/lib/queries/overview-dashboard";
 import { RatesNote } from "@/components/money";
 import { MonthPicker } from "@/components/month-picker";
 import { KpiCards } from "@/components/overview/kpi-cards";
@@ -33,22 +26,14 @@ export default async function OverviewPage({
   const month = Number(params.month) || now.getMonth() + 1;
 
   const settings = await getSettings(userId);
-  const prior = priorMonth(year, month);
-
-  const [overview, priorOverview, spentByCategory, cashflow, projectsView] =
-    await Promise.all([
-      getOverview(userId, year, month, settings.reportingCurrency, settings.rates),
-      getOverview(
-        userId,
-        prior.year,
-        prior.month,
-        settings.reportingCurrency,
-        settings.rates
-      ),
-      getSpentByCategory(userId, year, month, settings.reportingCurrency, settings.rates),
-      getCashflowSeries(userId, year, month, settings.reportingCurrency, settings.rates),
-      getProjectsView(userId, settings.rates),
-    ]);
+  const { overview, priorOverview, spentByCategory, cashflow, projectsView } =
+    await getOverviewDashboard(
+      userId,
+      year,
+      month,
+      settings.reportingCurrency,
+      settings.rates
+    );
 
   const mom = computeMomDeltas(overview, priorOverview);
 
@@ -69,19 +54,18 @@ export default async function OverviewPage({
     },
   ];
 
-  // Serialize Date fields for client boundaries (projects only used server-side here).
   return (
     <div className="mx-auto max-w-7xl space-y-6 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">Overview</h1>
-          <p className="mt-0.5 text-sm text-stone-500">
+          <p className="mt-0.5 text-sm text-ink-muted">
             {monthName(month)} {year} · Finance analytics
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <MonthPicker year={year} month={month} basePath="/" />
-          <OverviewRefresh />
+          <OverviewRefresh year={year} month={month} />
         </div>
       </div>
 
@@ -111,7 +95,7 @@ export default async function OverviewPage({
         <ProjectsProgress projects={projectsView.projects} />
       </div>
 
-      <RatesNote usdToCrc={settings.rates.usdToCrc} mxnToCrc={settings.rates.mxnToCrc} />
+      <RatesNote usdToCrc={settings.rates.usdToCrc} />
     </div>
   );
 }

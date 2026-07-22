@@ -15,12 +15,9 @@ export const authConfig = {
     authorized({ auth, request }) {
       const isLoggedIn = Boolean(auth?.user);
       const isLoginPage = request.nextUrl.pathname.startsWith("/login");
-      if (isLoginPage) {
-        if (isLoggedIn) {
-          return Response.redirect(new URL("/", request.nextUrl));
-        }
-        return true;
-      }
+      const isSignOutPage = request.nextUrl.pathname.startsWith("/signout");
+      // Always allow /login and /signout (route handler clears stale JWTs).
+      if (isLoginPage || isSignOutPage) return true;
       return isLoggedIn; // false → redirect to signIn page
     },
     jwt({ token, user }) {

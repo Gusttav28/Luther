@@ -21,12 +21,6 @@ async function main() {
     create: { userId: user.id }, // defaults: CRC reporting, zero starting balance, rates unset
   });
 
-  await prisma.allocationSetting.upsert({
-    where: { userId: user.id },
-    update: {},
-    create: { userId: user.id }, // default: no allocation until the owner sets one
-  });
-
   await prisma.category.upsert({
     where: { userId_name: { userId: user.id, name: "Uncategorized" } },
     update: {},

@@ -4,21 +4,23 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { createSavingsAction, updateSavingsAction, deleteSavingsAction } from "./actions";
 import { initialActionState } from "@/lib/action-state";
 import { formatMinor, type Currency } from "@/lib/money";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { SavingsRow } from "@/lib/queries/savings";
 
-const CURRENCY_OPTIONS: Currency[] = ["CRC", "USD", "MXN"];
+const CURRENCY_OPTIONS: Currency[] = ["CRC", "USD"];
 
 export function AddSavingsForm({ defaultDate }: { defaultDate: string }) {
-  const [state, formAction, pending] = useActionState(createSavingsAction, initialActionState);
+  const [state, formAction] = useActionState(createSavingsAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.ok) formRef.current?.reset();
   }, [state]);
   return (
     <form ref={formRef} action={formAction} className="card space-y-3">
-      <h2 className="text-base font-semibold">Record contribution</h2>
-      <p className="text-sm text-stone-500">
-        Use a negative amount (e.g. -50) for a withdrawal.
+      <h2 className="text-base font-semibold">Manual adjustment</h2>
+      <p className="text-sm text-ink-muted">
+        Lifetime savings of 70% are calculated automatically. Use this form only for corrections
+        or withdrawals (negative amount, e.g. -50).
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
@@ -67,15 +69,13 @@ export function AddSavingsForm({ defaultDate }: { defaultDate: string }) {
         </div>
       </div>
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
-      <button type="submit" disabled={pending} className="btn-primary">
-        {pending ? "Saving…" : "Record"}
-      </button>
+      <PendingSubmitButton idle="Record" className="btn-primary min-w-[5.5rem]" pendingLabel="Recording" />
     </form>
   );
 }
 
 function EditSavingsForm({ row, onDone }: { row: SavingsRow; onDone: () => void }) {
-  const [state, formAction, pending] = useActionState(updateSavingsAction, initialActionState);
+  const [state, formAction] = useActionState(updateSavingsAction, initialActionState);
   useEffect(() => {
     if (state.ok) onDone();
   }, [state.ok, onDone]);
@@ -107,9 +107,7 @@ function EditSavingsForm({ row, onDone }: { row: SavingsRow; onDone: () => void 
       </select>
       <input name="note" defaultValue={row.note ?? ""} aria-label="Note" className="field-input" />
       <div className="flex items-center gap-2">
-        <button type="submit" disabled={pending} className="btn-primary px-3 py-1.5">
-          Save
-        </button>
+        <PendingSubmitButton idle="Save" className="btn-primary min-w-[4.5rem] px-3 py-1.5" pendingLabel="Saving" />
         <button type="button" onClick={onDone} className="btn-secondary">
           Cancel
         </button>
@@ -142,7 +140,7 @@ export function SavingsListRow({ row }: { row: SavingsRow }) {
       <div className="flex items-center gap-2">
         <span
           className={`text-sm font-semibold tabular-nums ${
-            isWithdrawal ? "text-red-600" : "text-brand-600"
+            isWithdrawal ? "text-red-600 dark:text-red-400" : "text-brand-accent"
           }`}
         >
           {formatMinor(row.amountMinor, row.currency)}
@@ -152,9 +150,11 @@ export function SavingsListRow({ row }: { row: SavingsRow }) {
         </button>
         <form action={deleteSavingsAction}>
           <input type="hidden" name="id" value={row.id} />
-          <button type="submit" className="btn-danger px-2 py-1 text-xs">
-            Delete
-          </button>
+          <PendingSubmitButton
+            idle="Delete"
+            className="btn-danger min-w-[3.5rem] px-2 py-1 text-xs"
+            pendingLabel="Deleting"
+          />
         </form>
       </div>
     </li>

@@ -33,24 +33,44 @@ describe("signedAmountSchema (R12 withdrawals)", () => {
 });
 
 describe("incomeEntrySchema (R3)", () => {
-  const base = { year: "2026", month: "7", period: "H1", amount: "100", currency: "USD" };
-  it("accepts a valid entry", () => {
+  const base = { year: "2026", month: "7", period: "H1", amount: "100", currency: "CRC" };
+  it("accepts a valid entry in CRC", () => {
     const parsed = incomeEntrySchema.parse(base);
     expect(parsed.amount).toBe(10000);
     expect(parsed.period).toBe("H1");
   });
+  it("accepts USD income", () => {
+    expect(incomeEntrySchema.safeParse({ ...base, currency: "USD" }).success).toBe(true);
+  });
   it("rejects a missing period", () => {
     expect(incomeEntrySchema.safeParse({ ...base, period: "" }).success).toBe(false);
   });
-  it("rejects unsupported currency (CRC income not allowed)", () => {
-    expect(incomeEntrySchema.safeParse({ ...base, currency: "CRC" }).success).toBe(false);
+  it("rejects unsupported currency", () => {
+    expect(incomeEntrySchema.safeParse({ ...base, currency: "EUR" }).success).toBe(false);
   });
 });
 
 describe("expenseSchema (R4)", () => {
-  const base = { date: "2026-07-20", amount: "12.34", currency: "MXN", categoryId: "c1" };
+  const base = {
+    date: "2026-07-20",
+    amount: "12.34",
+    currency: "CRC",
+    name: "Groceries",
+    categoryId: "c1",
+  };
   it("accepts a valid expense", () => {
     expect(expenseSchema.parse(base).amount).toBe(1234);
+  });
+  it("accepts a new category name instead of id", () => {
+    const parsed = expenseSchema.parse({
+      ...base,
+      categoryId: "",
+      categoryName: "Food",
+    });
+    expect(parsed.categoryName).toBe("Food");
+  });
+  it("requires expense name", () => {
+    expect(expenseSchema.safeParse({ ...base, name: "" }).success).toBe(false);
   });
   it("rejects a missing/invalid date", () => {
     expect(expenseSchema.safeParse({ ...base, date: "" }).success).toBe(false);
@@ -76,13 +96,11 @@ describe("settingsSchema and rates (R5)", () => {
   it("accepts valid settings and blank rates as null", () => {
     const parsed = settingsSchema.parse({
       usdToCrcRate: "512.35",
-      mxnToCrcRate: "",
       reportingCurrency: "CRC",
       startingBalance: "1000",
       startingBalanceCurrency: "CRC",
     });
     expect(parsed.usdToCrcRate).toBe("512.35");
-    expect(parsed.mxnToCrcRate).toBeNull();
     expect(parsed.startingBalance).toBe(100000);
   });
   it("rejects non-positive rates", () => {

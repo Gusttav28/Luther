@@ -2,7 +2,7 @@
  * Fail-fast environment assertions (R2): the app refuses to start without
  * its required configuration rather than running in an insecure state.
  */
-const REQUIRED_RUNTIME_VARS = ["DATABASE_URL", "AUTH_SECRET"] as const;
+const REQUIRED_RUNTIME_VARS = ["DATABASE_URL", "DIRECT_URL", "AUTH_SECRET"] as const;
 
 export function assertRuntimeEnv(): void {
   const missing = REQUIRED_RUNTIME_VARS.filter((name) => !process.env[name]);

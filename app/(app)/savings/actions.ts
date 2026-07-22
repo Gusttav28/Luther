@@ -7,6 +7,10 @@ import { savingsContributionSchema, fieldErrors } from "@/lib/validation";
 import { GENERIC_ERROR, type ActionState } from "@/lib/action-state";
 import { getSettings } from "@/lib/queries/settings";
 import { wouldGoNegative } from "@/lib/queries/savings";
+import {
+  safeMaterializeMonth,
+  yearMonthFromDateInput,
+} from "@/lib/queries/materialize";
 
 function parseForm(formData: FormData) {
   return savingsContributionSchema.safeParse({
@@ -39,8 +43,17 @@ export async function createSavingsAction(
     }
 
     await prisma.savingsContribution.create({
-      data: { userId, date: new Date(`${date}T12:00:00`), amountMinor: amount, currency, note },
+      data: {
+        userId,
+        date: new Date(`${date}T12:00:00`),
+        amountMinor: amount,
+        currency,
+        note,
+        source: "adjustment",
+      },
     });
+    const ym = yearMonthFromDateInput(date);
+    await safeMaterializeMonth(userId, ym.year, ym.month);
     revalidatePath("/savings");
     revalidatePath("/");
     return { ok: true };
@@ -70,6 +83,8 @@ export async function updateSavingsAction(
       data: { date: new Date(`${date}T12:00:00`), amountMinor: amount, currency, note },
     });
     if (result.count === 0) return GENERIC_ERROR;
+    const ym = yearMonthFromDateInput(date);
+    await safeMaterializeMonth(userId, ym.year, ym.month);
     revalidatePath("/savings");
     revalidatePath("/");
     return { ok: true };
@@ -81,7 +96,15 @@ export async function updateSavingsAction(
 export async function deleteSavingsAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const id = String(formData.get("id") ?? "");
+  const existing = await prisma.savingsContribution.findFirst({
+    where: { id, userId },
+    select: { date: true },
+  });
   await prisma.savingsContribution.deleteMany({ where: { id, userId } });
+  if (existing) {
+    const ym = yearMonthFromDateInput(existing.date);
+    await safeMaterializeMonth(userId, ym.year, ym.month);
+  }
   revalidatePath("/savings");
   revalidatePath("/");
 }

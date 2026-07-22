@@ -5,9 +5,36 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
 import { projectSchema, fieldErrors } from "@/lib/validation";
 import { GENERIC_ERROR, type ActionState } from "@/lib/action-state";
-import { getSettings, getAllocation } from "@/lib/queries/settings";
-import { convertMinor, MissingRateError, sumInCurrency, type Currency } from "@/lib/money";
-import { currentPeriod } from "@/lib/periods";
+import { safeMaterializeMonth, yearMonthFromDate } from "@/lib/queries/materialize";
+
+async function materializeNow(userId: string) {
+  const { year, month } = yearMonthFromDate(new Date());
+  await safeMaterializeMonth(userId, year, month);
+}
+
+async function clearOtherPriorities(userId: string, exceptId?: string) {
+  await prisma.project.updateMany({
+    where: {
+      userId,
+      isPriority: true,
+      ...(exceptId ? { id: { not: exceptId } } : {}),
+    },
+    data: { isPriority: false },
+  });
+}
+
+function parseProjectForm(formData: FormData) {
+  return projectSchema.safeParse({
+    name: formData.get("name") ?? "",
+    cost: formData.get("cost") ?? "",
+    currency: formData.get("currency"),
+    allocationPercent: formData.get("allocationPercent") ?? "",
+    periodMode: formData.get("periodMode") ?? "BOTH",
+    goalDate: formData.get("goalDate") ?? "",
+    link: formData.get("link") ?? "",
+    isPriority: formData.get("isPriority") === "on",
+  });
+}
 
 export async function createProjectAction(
   _prev: ActionState,
@@ -15,17 +42,18 @@ export async function createProjectAction(
 ): Promise<ActionState> {
   try {
     const userId = await requireUserId();
-    const parsed = projectSchema.safeParse({
-      name: formData.get("name") ?? "",
-      cost: formData.get("cost") ?? "",
-      currency: formData.get("currency"),
-    });
+    const parsed = parseProjectForm(formData);
     if (!parsed.success) return { errors: fieldErrors(parsed.error) };
 
     const maxPriority = await prisma.project.aggregate({
       where: { userId },
       _max: { priority: true },
     });
+
+    if (parsed.data.isPriority) {
+      await clearOtherPriorities(userId);
+    }
+
     await prisma.project.create({
       data: {
         userId,
@@ -33,11 +61,22 @@ export async function createProjectAction(
         costMinor: parsed.data.cost,
         currency: parsed.data.currency,
         priority: (maxPriority._max.priority ?? 0) + 1,
+        allocationPercent: parsed.data.allocationPercent,
+        periodMode: parsed.data.periodMode,
+        goalDate: parsed.data.goalDate
+          ? new Date(`${parsed.data.goalDate}T12:00:00`)
+          : null,
+        link: parsed.data.link ?? null,
+        isPriority: parsed.data.isPriority,
       },
     });
+    await materializeNow(userId);
     revalidatePath("/projects");
+    revalidatePath("/");
+    revalidatePath("/savings");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    console.error("createProjectAction failed", error);
     return GENERIC_ERROR;
   }
 }
@@ -49,24 +88,38 @@ export async function updateProjectAction(
   try {
     const userId = await requireUserId();
     const id = String(formData.get("id") ?? "");
-    const parsed = projectSchema.safeParse({
-      name: formData.get("name") ?? "",
-      cost: formData.get("cost") ?? "",
-      currency: formData.get("currency"),
-    });
+    if (!id) return GENERIC_ERROR;
+
+    const parsed = parseProjectForm(formData);
     if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+
+    if (parsed.data.isPriority) {
+      await clearOtherPriorities(userId, id);
+    }
+
     const result = await prisma.project.updateMany({
       where: { id, userId },
       data: {
         name: parsed.data.name,
         costMinor: parsed.data.cost,
         currency: parsed.data.currency,
+        allocationPercent: parsed.data.allocationPercent,
+        periodMode: parsed.data.periodMode,
+        goalDate: parsed.data.goalDate
+          ? new Date(`${parsed.data.goalDate}T12:00:00`)
+          : null,
+        link: parsed.data.link ?? null,
+        isPriority: parsed.data.isPriority,
       },
     });
     if (result.count === 0) return GENERIC_ERROR;
+    await materializeNow(userId);
     revalidatePath("/projects");
+    revalidatePath("/");
+    revalidatePath("/savings");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    console.error("updateProjectAction failed", error);
     return GENERIC_ERROR;
   }
 }
@@ -78,7 +131,10 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
     prisma.projectContribution.deleteMany({ where: { userId, projectId: id } }),
     prisma.project.deleteMany({ where: { id, userId } }),
   ]);
+  await materializeNow(userId);
   revalidatePath("/projects");
+  revalidatePath("/");
+  revalidatePath("/savings");
 }
 
 export async function toggleProjectCompletedAction(formData: FormData): Promise<void> {
@@ -88,12 +144,31 @@ export async function toggleProjectCompletedAction(formData: FormData): Promise<
   if (!project) return;
   await prisma.project.update({
     where: { id },
-    data: { completedAt: project.completedAt ? null : new Date() },
+    data: {
+      completedAt: project.completedAt ? null : new Date(),
+      isPriority: project.completedAt ? project.isPriority : false,
+    },
   });
+  await materializeNow(userId);
   revalidatePath("/projects");
+  revalidatePath("/");
+  revalidatePath("/savings");
 }
 
-/** Swap priority with the neighbor above/below (R9 reorder). */
+export async function setPriorityProjectAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const id = String(formData.get("id") ?? "");
+  const project = await prisma.project.findFirst({ where: { id, userId, completedAt: null } });
+  if (!project) return;
+  await clearOtherPriorities(userId);
+  await prisma.project.update({ where: { id }, data: { isPriority: true } });
+  await materializeNow(userId);
+  revalidatePath("/projects");
+  revalidatePath("/");
+  revalidatePath("/savings");
+}
+
+/** Swap display order with the neighbor above/below. */
 export async function moveProjectAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const id = String(formData.get("id") ?? "");
@@ -116,99 +191,4 @@ export async function moveProjectAction(formData: FormData): Promise<void> {
     prisma.project.update({ where: { id: neighbor.id }, data: { priority: project.priority } }),
   ]);
   revalidatePath("/projects");
-}
-
-/**
- * Apply the fixed per-period allocation to projects in priority order for the
- * current half-month period, recording ProjectContribution rows (R9). Refuses
- * to double-apply for the same period.
- */
-export async function applyAllocationAction(): Promise<ActionState> {
-  try {
-    const userId = await requireUserId();
-    const [allocation, settings] = await Promise.all([
-      getAllocation(userId),
-      getSettings(userId),
-    ]);
-    if (allocation.amountMinor <= 0) {
-      return { errors: { _form: "Set a per-period allocation amount in Settings first." } };
-    }
-
-    const ref = currentPeriod();
-    const existing = await prisma.projectContribution.count({
-      where: { userId, year: ref.year, month: ref.month, period: ref.period },
-    });
-    if (existing > 0) {
-      return {
-        errors: { _form: "This period's allocation has already been applied." },
-      };
-    }
-
-    const projects = await prisma.project.findMany({
-      where: { userId, completedAt: null },
-      orderBy: { priority: "asc" },
-    });
-    const contributions = await prisma.projectContribution.findMany({ where: { userId } });
-
-    let available = allocation.amountMinor;
-    const writes: Array<{ projectId: string; amountMinor: number }> = [];
-
-    for (const project of projects) {
-      if (available <= 0) break;
-      let costInAlloc: number;
-      let savedInAlloc: number | null;
-      try {
-        costInAlloc = convertMinor(
-          project.costMinor,
-          project.currency as Currency,
-          allocation.currency,
-          settings.rates
-        );
-        savedInAlloc = sumInCurrency(
-          contributions
-            .filter((c) => c.projectId === project.id)
-            .map((c) => ({ amountMinor: c.amountMinor, currency: c.currency as Currency })),
-          allocation.currency,
-          settings.rates
-        );
-      } catch (error) {
-        if (error instanceof MissingRateError) {
-          return {
-            errors: { _form: "Set both exchange rates in Settings before applying allocations." },
-          };
-        }
-        throw error;
-      }
-      if (savedInAlloc === null) {
-        return {
-          errors: { _form: "Set both exchange rates in Settings before applying allocations." },
-        };
-      }
-      const needed = Math.max(0, costInAlloc - savedInAlloc);
-      if (needed === 0) continue;
-      const applied = Math.min(available, needed);
-      writes.push({ projectId: project.id, amountMinor: applied });
-      available -= applied;
-    }
-
-    if (writes.length === 0) {
-      return { errors: { _form: "All projects are fully funded — nothing to allocate." } };
-    }
-
-    await prisma.projectContribution.createMany({
-      data: writes.map((w) => ({
-        userId,
-        projectId: w.projectId,
-        year: ref.year,
-        month: ref.month,
-        period: ref.period,
-        amountMinor: w.amountMinor,
-        currency: allocation.currency,
-      })),
-    });
-    revalidatePath("/projects");
-    return { ok: true };
-  } catch {
-    return GENERIC_ERROR;
-  }
 }

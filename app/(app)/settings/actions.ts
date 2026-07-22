@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
-import { settingsSchema, allocationSchema, fieldErrors } from "@/lib/validation";
+import { settingsSchema, fieldErrors } from "@/lib/validation";
 import { GENERIC_ERROR, type ActionState } from "@/lib/action-state";
+import { safeMaterializeMonth, yearMonthFromDate } from "@/lib/queries/materialize";
 
 export async function updateSettingsAction(
   _prev: ActionState,
@@ -15,7 +15,6 @@ export async function updateSettingsAction(
     const userId = await requireUserId();
     const parsed = settingsSchema.safeParse({
       usdToCrcRate: formData.get("usdToCrcRate") ?? "",
-      mxnToCrcRate: formData.get("mxnToCrcRate") ?? "",
       reportingCurrency: formData.get("reportingCurrency"),
       startingBalance: formData.get("startingBalance") ?? "0",
       startingBalanceCurrency: formData.get("startingBalanceCurrency"),
@@ -27,7 +26,6 @@ export async function updateSettingsAction(
       where: { userId },
       update: {
         usdToCrcRate: data.usdToCrcRate,
-        mxnToCrcRate: data.mxnToCrcRate,
         reportingCurrency: data.reportingCurrency,
         startingBalanceMinor: data.startingBalance,
         startingBalanceCurrency: data.startingBalanceCurrency,
@@ -35,37 +33,14 @@ export async function updateSettingsAction(
       create: {
         userId,
         usdToCrcRate: data.usdToCrcRate,
-        mxnToCrcRate: data.mxnToCrcRate,
         reportingCurrency: data.reportingCurrency,
         startingBalanceMinor: data.startingBalance,
         startingBalanceCurrency: data.startingBalanceCurrency,
       },
     });
-    revalidatePath("/", "layout");
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) return { errors: fieldErrors(error) };
-    return GENERIC_ERROR;
-  }
-}
-
-export async function updateAllocationAction(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  try {
-    const userId = await requireUserId();
-    const parsed = allocationSchema.safeParse({
-      amount: formData.get("amount") ?? "",
-      currency: formData.get("currency"),
-    });
-    if (!parsed.success) return { errors: fieldErrors(parsed.error) };
-
-    await prisma.allocationSetting.upsert({
-      where: { userId },
-      update: { amountMinor: parsed.data.amount, currency: parsed.data.currency },
-      create: { userId, amountMinor: parsed.data.amount, currency: parsed.data.currency },
-    });
+    const now = new Date();
+    const { year, month } = yearMonthFromDate(now);
+    await safeMaterializeMonth(userId, year, month);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch {

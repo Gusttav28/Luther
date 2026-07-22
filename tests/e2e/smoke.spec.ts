@@ -45,7 +45,7 @@ test("login, use each module, and logout", async ({ page }) => {
   const stamp = Date.now();
   const incomeLabel = `e2e salary ${stamp}`;
   const categoryName = `E2E Category ${stamp}`;
-  const expenseNote = `e2e expense ${stamp}`;
+  const expenseName = `e2e expense ${stamp}`;
   const savingsNote = `e2e savings ${stamp}`;
   const projectName = `E2E Project ${stamp}`;
 
@@ -65,11 +65,11 @@ test("login, use each module, and logout", async ({ page }) => {
 
   // Expense (R4)
   await page.goto("/expenses");
+  await page.getByLabel("Expense name").fill(expenseName);
   await page.getByLabel("Amount").fill("42.50");
-  await page.getByLabel("Category").selectOption({ label: categoryName });
-  await page.getByLabel("Note (optional)").fill(expenseNote);
+  await page.getByRole("combobox", { name: "Category" }).fill(categoryName);
   await page.getByRole("button", { name: "Add expense" }).click();
-  await expect(page.getByText(expenseNote)).toBeVisible();
+  await expect(page.getByText(expenseName)).toBeVisible();
 
   // Savings contribution (R12)
   await page.goto("/savings");

@@ -7,7 +7,6 @@ export default defineConfig({
     environment: "node",
     globalSetup: ["tests/global-setup.ts"],
     env: {
-      DATABASE_URL: "file:./test.db",
       AUTH_SECRET: "test-secret-not-used-in-production",
     },
     fileParallelism: false,

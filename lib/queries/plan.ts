@@ -57,6 +57,7 @@ export async function getPlanMatrix(
     prisma.expense.findMany({
       where: {
         userId,
+        completed: true,
         date: { gte: new Date(year, 0, 1), lt: new Date(year + 1, 0, 1) },
       },
       select: { categoryId: true, date: true, amountMinor: true, currency: true },

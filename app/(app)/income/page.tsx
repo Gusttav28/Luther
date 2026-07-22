@@ -1,8 +1,10 @@
 import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/settings";
 import { getIncomeForMonth } from "@/lib/queries/income";
+import { formatMinor } from "@/lib/money";
 import { Money, RatesNote } from "@/components/money";
 import { MonthPicker } from "@/components/month-picker";
+import { DonutChart } from "@/components/charts/donut-chart";
 import { AddIncomeForm, IncomeEntryRow } from "./income-forms";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +32,44 @@ export default async function IncomePage({
   const h1 = data.entries.filter((e) => e.period === "H1");
   const h2 = data.entries.filter((e) => e.period === "H2");
 
+  const incomeSegments = [
+    {
+      key: "h1",
+      name: "First half (1–15)",
+      value: data.totalH1 ?? 0,
+      color: "#3d9b6a",
+    },
+    {
+      key: "h2",
+      name: "Second half (16–end)",
+      value: data.totalH2 ?? 0,
+      color: "#5b8def",
+    },
+  ].filter((s) => s.value > 0);
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="page-title">Income</h1>
         <MonthPicker year={year} month={month} basePath="/income" />
       </div>
 
-      <AddIncomeForm year={year} month={month} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <AddIncomeForm year={year} month={month} />
+        <DonutChart
+          title="Composition"
+          subtitle="Income by half-month this month"
+          segments={incomeSegments}
+          currency={settings.reportingCurrency}
+          centerLabel={
+            data.totalMonth !== null
+              ? formatMinor(data.totalMonth, settings.reportingCurrency)
+              : "—"
+          }
+          centerSubLabel="Total earned"
+          emptyMessage="No income recorded this month."
+        />
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card">
@@ -59,7 +91,7 @@ export default async function IncomePage({
           </p>
         </div>
       </div>
-      <RatesNote usdToCrc={settings.rates.usdToCrc} mxnToCrc={settings.rates.mxnToCrc} />
+      <RatesNote usdToCrc={settings.rates.usdToCrc} />
 
       {[
         { title: "First half (1–15)", entries: h1 },

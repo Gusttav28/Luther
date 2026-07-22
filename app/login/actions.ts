@@ -5,6 +5,7 @@ import { signIn } from "@/lib/auth";
 
 export interface LoginState {
   error?: string;
+  ok?: boolean;
 }
 
 export async function loginAction(
@@ -12,17 +13,22 @@ export async function loginAction(
   formData: FormData
 ): Promise<LoginState> {
   try {
-    await signIn("credentials", {
+    const result = await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
-      redirectTo: "/",
+      redirect: false,
     });
-    return {};
-  } catch (error) {
-    if (error instanceof AuthError) {
-      // Generic message — no user enumeration (R1).
+
+    if (!result || result.error) {
       return { error: "Invalid email or password." };
     }
-    throw error; // NEXT_REDIRECT on success must propagate
+
+    // Client warms DB cache, then navigates into the app.
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: "Invalid email or password." };
+    }
+    throw error;
   }
 }

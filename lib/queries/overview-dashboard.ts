@@ -1,6 +1,12 @@
-import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
-import type { OverviewFigures } from "@/lib/queries/overview";
+import type { OverviewFigures, MonthSnapshot } from "@/lib/queries/overview";
+import {
+  figuresFromSnapshot,
+  getLifetimeSavingsBalance,
+  loadMonthSnapshot,
+} from "@/lib/queries/overview";
+import { getScopeAmounts } from "@/lib/queries/waterfall-scope";
+import { getProjectsView, type ProjectsView } from "@/lib/queries/projects";
 
 export interface MomDelta {
   /** Percent change vs prior month; null when not computable. */
@@ -52,35 +58,21 @@ export interface SpentByCategoryResult {
   categories: CategorySpend[];
 }
 
-/** Aggregate expense totals by category for a month (reporting currency). */
-export async function getSpentByCategory(
-  userId: string,
-  year: number,
-  month: number,
+/** Derive category spend from an already-loaded month snapshot (no extra DB). */
+export function spentByCategoryFromSnapshot(
+  snapshot: MonthSnapshot,
   reporting: Currency,
   rates: Rates
-): Promise<SpentByCategoryResult> {
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 1);
-
-  const expenses = await prisma.expense.findMany({
-    where: { userId, date: { gte: monthStart, lt: monthEnd } },
-    include: { category: true },
-  });
-
-  const byCategory = new Map<string, { name: string; rows: Array<{ amountMinor: number; currency: Currency }> }>();
-  for (const expense of expenses) {
-    const key = expense.categoryId;
-    const existing = byCategory.get(key);
-    const row = {
-      amountMinor: expense.amountMinor,
-      currency: expense.currency as Currency,
-    };
-    if (existing) {
-      existing.rows.push(row);
-    } else {
-      byCategory.set(key, { name: expense.category.name, rows: [row] });
-    }
+): SpentByCategoryResult {
+  const byCategory = new Map<
+    string,
+    { name: string; rows: Array<{ amountMinor: number; currency: Currency }> }
+  >();
+  for (const expense of snapshot.expenses) {
+    const existing = byCategory.get(expense.categoryId);
+    const row = { amountMinor: expense.amountMinor, currency: expense.currency };
+    if (existing) existing.rows.push(row);
+    else byCategory.set(expense.categoryId, { name: expense.categoryName, rows: [row] });
   }
 
   const categories: CategorySpend[] = [];
@@ -113,32 +105,14 @@ export interface CashflowPoint {
   cumulativeNet: number | null;
 }
 
-/**
- * Cashflow series for the selected month: start, end of H1, end of month.
- * Values are cumulative earned / spent / net in reporting currency.
- */
-export async function getCashflowSeries(
-  userId: string,
-  year: number,
-  month: number,
+/** Derive cashflow series from an already-loaded month snapshot (no extra DB). */
+export function cashflowFromSnapshot(
+  snapshot: MonthSnapshot,
   reporting: Currency,
   rates: Rates
-): Promise<CashflowPoint[]> {
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 1);
-  const lastDay = new Date(year, month, 0).getDate();
+): CashflowPoint[] {
+  const lastDay = new Date(snapshot.year, snapshot.month, 0).getDate();
   const h1End = 15;
-
-  const [income, expenses] = await Promise.all([
-    prisma.incomeEntry.findMany({
-      where: { userId, year, month, planned: false },
-      select: { amountMinor: true, currency: true, period: true },
-    }),
-    prisma.expense.findMany({
-      where: { userId, date: { gte: monthStart, lt: monthEnd } },
-      select: { amountMinor: true, currency: true, date: true },
-    }),
-  ]);
 
   const toReporting = (list: Array<{ amountMinor: number; currency: string }>) =>
     sumInCurrency(
@@ -147,19 +121,18 @@ export async function getCashflowSeries(
       rates
     );
 
-  const earnedH1 = toReporting(income.filter((i) => i.period === "H1"));
-  const earnedH2 = toReporting(income.filter((i) => i.period === "H2"));
+  const earnedH1 = toReporting(snapshot.income.filter((i) => i.period === "H1"));
+  const earnedH2 = toReporting(snapshot.income.filter((i) => i.period === "H2"));
   const earnedMonth =
     earnedH1 === null || earnedH2 === null ? null : earnedH1 + earnedH2;
 
   const spentH1 = toReporting(
-    expenses.filter((e) => e.date.getDate() <= h1End).map((e) => ({
-      amountMinor: e.amountMinor,
-      currency: e.currency,
-    }))
+    snapshot.expenses
+      .filter((e) => e.date.getDate() <= h1End)
+      .map((e) => ({ amountMinor: e.amountMinor, currency: e.currency }))
   );
   const spentMonth = toReporting(
-    expenses.map((e) => ({ amountMinor: e.amountMinor, currency: e.currency }))
+    snapshot.expenses.map((e) => ({ amountMinor: e.amountMinor, currency: e.currency }))
   );
 
   const net = (earned: number | null, spent: number | null): number | null => {
@@ -190,4 +163,73 @@ export async function getCashflowSeries(
       cumulativeNet: net(earnedMonth, spentMonth),
     },
   ];
+}
+
+export interface OverviewDashboard {
+  overview: OverviewFigures;
+  priorOverview: OverviewFigures;
+  spentByCategory: SpentByCategoryResult;
+  cashflow: CashflowPoint[];
+  projectsView: ProjectsView;
+}
+
+/**
+ * Single Overview page load: shared month snapshots, one lifetime aggregate,
+ * derived charts — no page-read materialize (R1, R3).
+ */
+export async function getOverviewDashboard(
+  userId: string,
+  year: number,
+  month: number,
+  reporting: Currency,
+  rates: Rates
+): Promise<OverviewDashboard> {
+  const prior = priorMonth(year, month);
+
+  const [
+    currentSnap,
+    priorSnap,
+    lifetimeSavingsBalance,
+    currentMonthScope,
+    currentH1Scope,
+    currentH2Scope,
+    priorMonthScope,
+    priorH1Scope,
+    priorH2Scope,
+    projectsView,
+  ] = await Promise.all([
+    loadMonthSnapshot(userId, year, month),
+    loadMonthSnapshot(userId, prior.year, prior.month),
+    getLifetimeSavingsBalance(userId, reporting, rates),
+    getScopeAmounts(userId, year, month, "BOTH", reporting, rates),
+    getScopeAmounts(userId, year, month, "H1", reporting, rates),
+    getScopeAmounts(userId, year, month, "H2", reporting, rates),
+    getScopeAmounts(userId, prior.year, prior.month, "BOTH", reporting, rates),
+    getScopeAmounts(userId, prior.year, prior.month, "H1", reporting, rates),
+    getScopeAmounts(userId, prior.year, prior.month, "H2", reporting, rates),
+    getProjectsView(userId, rates, new Date(), { skipMaterialize: true }),
+  ]);
+
+  const overview = figuresFromSnapshot(
+    currentSnap,
+    { month: currentMonthScope, h1: currentH1Scope, h2: currentH2Scope },
+    lifetimeSavingsBalance,
+    reporting,
+    rates
+  );
+  const priorOverview = figuresFromSnapshot(
+    priorSnap,
+    { month: priorMonthScope, h1: priorH1Scope, h2: priorH2Scope },
+    lifetimeSavingsBalance,
+    reporting,
+    rates
+  );
+
+  return {
+    overview,
+    priorOverview,
+    spentByCategory: spentByCategoryFromSnapshot(currentSnap, reporting, rates),
+    cashflow: cashflowFromSnapshot(currentSnap, reporting, rates),
+    projectsView,
+  };
 }

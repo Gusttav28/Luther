@@ -13,14 +13,15 @@ export interface ExpenseRow {
   currency: Currency;
   categoryId: string;
   categoryName: string;
-  note: string | null;
+  name: string | null;
+  completed: boolean;
   /** Converted to reporting currency; null when the needed rate is unset. */
   convertedMinor: number | null;
 }
 
 export interface ExpenseList {
   expenses: ExpenseRow[];
-  /** Total in reporting currency; null when any needed rate is unset. */
+  /** Completed-only total in reporting currency; null when a completed row is missing a rate. */
   totalMinor: number | null;
 }
 
@@ -52,8 +53,10 @@ export async function getExpenses(
       if (!(error instanceof MissingRateError)) throw error;
       converted = null;
     }
-    if (converted === null) total = null;
-    else if (total !== null) total += converted;
+    if (r.completed) {
+      if (converted === null) total = null;
+      else if (total !== null) total += converted;
+    }
     return {
       id: r.id,
       date: r.date,
@@ -61,7 +64,8 @@ export async function getExpenses(
       currency: r.currency as Currency,
       categoryId: r.categoryId,
       categoryName: r.category.name,
-      note: r.note,
+      name: r.name,
+      completed: r.completed,
       convertedMinor: converted,
     };
   });
@@ -72,6 +76,13 @@ export async function getExpenses(
 export async function getActiveCategories(userId: string) {
   return prisma.category.findMany({
     where: { userId, archived: false },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function getAllCategories(userId: string) {
+  return prisma.category.findMany({
+    where: { userId },
     orderBy: { name: "asc" },
   });
 }

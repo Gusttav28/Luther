@@ -20,6 +20,7 @@ export async function createCategoryAction(
     if (existing) return { errors: { name: "A category with this name already exists" } };
     await prisma.category.create({ data: { userId, name: parsed.data.name } });
     revalidatePath("/plan");
+    revalidatePath("/expenses");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -41,6 +42,7 @@ export async function renameCategoryAction(
     });
     if (result.count === 0) return GENERIC_ERROR;
     revalidatePath("/plan");
+    revalidatePath("/expenses");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -53,6 +55,7 @@ export async function setCategoryArchivedAction(formData: FormData): Promise<voi
   const archived = formData.get("archived") === "true";
   await prisma.category.updateMany({ where: { id, userId }, data: { archived } });
   revalidatePath("/plan");
+  revalidatePath("/expenses");
 }
 
 /**
@@ -78,6 +81,7 @@ export async function deleteCategoryAction(
       prisma.category.deleteMany({ where: { id, userId } }),
     ]);
     revalidatePath("/plan");
+    revalidatePath("/expenses");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -112,6 +116,86 @@ export async function setPlanCellAction(
       });
     }
     revalidatePath("/plan");
+    revalidatePath("/expenses");
+    return { ok: true };
+  } catch {
+    return GENERIC_ERROR;
+  }
+}
+
+/**
+ * Copy all plan cells from one month into another (upsert).
+ * Used to carry a category plan forward without re-entering amounts.
+ */
+export async function copyPlanMonthAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const userId = await requireUserId();
+    const fromYear = Number(formData.get("fromYear"));
+    const fromMonth = Number(formData.get("fromMonth"));
+    const toYear = Number(formData.get("toYear"));
+    const toMonth = Number(formData.get("toMonth"));
+
+    if (
+      !Number.isInteger(fromYear) ||
+      !Number.isInteger(fromMonth) ||
+      fromMonth < 1 ||
+      fromMonth > 12 ||
+      !Number.isInteger(toYear) ||
+      !Number.isInteger(toMonth) ||
+      toMonth < 1 ||
+      toMonth > 12
+    ) {
+      return { errors: { _form: "Invalid month selection" } };
+    }
+
+    if (fromYear === toYear && fromMonth === toMonth) {
+      return { errors: { _form: "Choose a different target month" } };
+    }
+
+    const source = await prisma.planCell.findMany({
+      where: { userId, year: fromYear, month: fromMonth },
+    });
+
+    if (source.length === 0) {
+      return {
+        errors: {
+          _form:
+            "No category plan amounts in the previous month to export. Add them on the Plan screen first.",
+        },
+      };
+    }
+
+    await prisma.$transaction(
+      source.map((cell) =>
+        prisma.planCell.upsert({
+          where: {
+            categoryId_year_month: {
+              categoryId: cell.categoryId,
+              year: toYear,
+              month: toMonth,
+            },
+          },
+          update: {
+            amountMinor: cell.amountMinor,
+            currency: cell.currency,
+          },
+          create: {
+            userId,
+            categoryId: cell.categoryId,
+            year: toYear,
+            month: toMonth,
+            amountMinor: cell.amountMinor,
+            currency: cell.currency,
+          },
+        })
+      )
+    );
+
+    revalidatePath("/plan");
+    revalidatePath("/expenses");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;

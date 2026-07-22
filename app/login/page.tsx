@@ -1,24 +1,37 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { loginAction, type LoginState } from "./actions";
+import { LutherLogo } from "@/components/logo";
 
 const initialState: LoginState = {};
 
 export default function LoginPage() {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(loginAction, initialState);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    try {
+      router.prefetch("/");
+    } catch {
+      // ignore
+    }
+    router.replace("/");
+  }, [state.ok, router]);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-lg font-bold text-white shadow-sm">
-            L
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-600">Luther</h1>
-          <p className="mt-1 text-sm text-stone-500">Personal finance, under your control.</p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <LutherLogo size="lg" href={null} priority />
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-brand-950 dark:text-brand-300">
+            Luther
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">Personal finance, under your control.</p>
         </div>
-        <form action={formAction} className="card space-y-4">
+        <form action={formAction} className="card space-y-4" aria-busy={pending}>
           <div>
             <label htmlFor="email" className="field-label">
               Email
@@ -29,6 +42,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
+              disabled={pending}
               className="field-input"
             />
           </div>
@@ -42,11 +56,12 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
+              disabled={pending}
               className="field-input"
             />
           </div>
           {state.error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               {state.error}
             </p>
           ) : null}

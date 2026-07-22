@@ -3,40 +3,219 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+    /* White + dark green light theme */
+    --luther-page: #ffffff;
+    --luther-card: #ffffff;
+    --luther-elevated: #ffffff;
+    --luther-muted-surface: #f0f7f3;
+    --luther-border: #e2eee8;
+    --luther-border-strong: #c5d9cd;
+    --luther-text: #0b1f17;
+    --luther-text-secondary: #1a4231;
+    --luther-text-muted: #4a6b5a;
+    --luther-text-faint: #8aa396;
+    --luther-input-bg: #ffffff;
+    --luther-input-text: #0b1f17;
+    --luther-ring-offset: #ffffff;
+    --chart-grid: #e2eee8;
+    --chart-text: #4a6b5a;
+    --chart-surface: #ffffff;
+    --chart-border: #c5d9cd;
+    --chart-accent: #266749;
+    --chart-accent-2: #35815c;
+    --chart-accent-3: #549f79;
+  }
+
+  .dark {
+    color-scheme: dark;
+    /* Neutral dark surfaces; dark green only for details/accents */
+    --luther-page: #0a0a0a;
+    --luther-card: #141414;
+    --luther-elevated: #1a1a1a;
+    --luther-muted-surface: #1c1c1c;
+    --luther-border: #2a2a2a;
+    --luther-border-strong: #266749;
+    --luther-text: #ffffff;
+    --luther-text-secondary: #f5f5f5;
+    --luther-text-muted: #cfcfcf;
+    --luther-text-faint: #a3a3a3;
+    --luther-input-bg: #1a1a1a;
+    --luther-input-text: #ffffff;
+    --luther-ring-offset: #0a0a0a;
+    --chart-grid: #2a2a2a;
+    --chart-text: #cfcfcf;
+    --chart-surface: #141414;
+    --chart-border: #266749;
+    --chart-accent: #549f79;
+    --chart-accent-2: #86c1a3;
+    --chart-accent-3: #b8dcc8;
+  }
+
   html {
     @apply antialiased;
   }
+
   body {
-    @apply bg-surface font-sans text-stone-800;
+    background-color: var(--luther-page);
+    color: var(--luther-text);
+    @apply font-sans;
   }
 }
 
 @layer components {
   .field-label {
-    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500;
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide;
+    color: var(--luther-text-muted);
   }
+
   .field-input {
-    @apply w-full rounded-card border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400;
+    @apply w-full rounded-card border px-3 py-2 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1 disabled:opacity-50;
+    background-color: var(--luther-input-bg);
+    border-color: var(--luther-border-strong);
+    color: var(--luther-input-text);
+    --tw-ring-offset-color: var(--luther-ring-offset);
   }
+
+  .field-input::placeholder {
+    color: var(--luther-text-faint);
+  }
+
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-card bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-card bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-900 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 disabled:opacity-50;
+    --tw-ring-offset-color: var(--luther-ring-offset);
   }
+  .dark .btn-primary {
+    @apply bg-brand-600 text-white hover:bg-brand-500;
+  }
+
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-card border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center rounded-card border px-3 py-1.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-brand-300 focus:ring-offset-2 disabled:opacity-50;
+    background-color: var(--luther-card);
+    border-color: var(--luther-border-strong);
+    color: var(--luther-text-secondary);
+    --tw-ring-offset-color: var(--luther-ring-offset);
   }
+  .btn-secondary:hover {
+    background-color: var(--luther-muted-surface);
+  }
+
   .btn-danger {
-    @apply inline-flex items-center justify-center rounded-card border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50;
+    @apply inline-flex items-center justify-center rounded-card border px-3 py-1.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50;
+    background-color: var(--luther-card);
+    border-color: theme("colors.red.300");
+    color: theme("colors.red.600");
+    --tw-ring-offset-color: var(--luther-ring-offset);
   }
+  .dark .btn-danger {
+    border-color: theme("colors.red.900");
+    color: theme("colors.red.400");
+  }
+  .btn-danger:hover {
+    background-color: theme("colors.red.50");
+  }
+  .dark .btn-danger:hover {
+    background-color: theme("colors.red.950");
+  }
+
   .card {
-    @apply rounded-card bg-surface-card p-4 shadow-card;
+    @apply rounded-card p-4 shadow-card;
+    background-color: var(--luther-card);
+    border: 1px solid var(--luther-border);
+    color: var(--luther-text);
   }
+
   .error-text {
     @apply mt-1 text-xs text-red-600;
   }
-  .page-title {
-    @apply text-2xl font-bold tracking-tight text-stone-900;
+  .dark .error-text {
+    @apply text-red-400;
   }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight;
+    color: var(--luther-text);
+  }
+
   .section-title {
-    @apply text-base font-semibold text-stone-800;
+    @apply text-base font-semibold;
+    color: var(--luther-text);
+  }
+
+  .muted {
+    color: var(--luther-text-muted);
+  }
+
+  .faint {
+    color: var(--luther-text-faint);
+  }
+
+  .surface-muted {
+    background-color: var(--luther-muted-surface);
+  }
+
+  .text-action {
+    @apply rounded transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1;
+    color: var(--luther-text-muted);
+    --tw-ring-offset-color: var(--luther-card);
+  }
+  .text-action:hover {
+    color: var(--luther-text);
+  }
+
+  .text-action-danger {
+    @apply rounded text-red-500 transition hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1;
+    --tw-ring-offset-color: var(--luther-card);
+  }
+  .dark .text-action-danger {
+    @apply text-red-400 hover:text-red-300;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1;
+    background-color: var(--luther-card);
+    border-color: var(--luther-border-strong);
+    color: var(--luther-text-secondary);
+    --tw-ring-offset-color: var(--luther-ring-offset);
+  }
+  .chip-active {
+    @apply border-transparent bg-brand-800 text-white;
+  }
+  .dark .chip-active {
+    @apply bg-brand-600 text-white;
+  }
+
+  .semantic-link {
+    @apply text-brand-700 underline-offset-2 hover:underline;
+  }
+  .dark .semantic-link {
+    @apply text-brand-300;
+  }
+
+  /* Brand emphasis: dark green in both themes */
+  .text-brand-accent {
+    @apply text-brand-950;
+  }
+  .dark .text-brand-accent {
+    @apply text-brand-300;
+  }
+
+  .panel-soft {
+    background-color: var(--luther-muted-surface);
+  }
+
+  .table-header {
+    background-color: var(--luther-muted-surface);
+    color: var(--luther-text-secondary);
+    border-color: var(--luther-border);
+  }
+
+  .table-sticky {
+    background-color: var(--luther-card);
+  }
+
+  .dark .shadow-card {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.35), 0 8px 24px rgb(0 0 0 / 0.28);
   }
 }

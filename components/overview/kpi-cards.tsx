@@ -15,7 +15,7 @@ function DeltaLabel({ delta }: { delta: MomDelta | undefined }) {
   const formatted = abs >= 10 ? abs.toFixed(0) : abs.toFixed(1);
   return (
     <p
-      className={`mt-1 text-xs font-medium ${up ? "text-positive" : "text-brand-600"}`}
+      className={`mt-1 text-xs font-medium ${up ? "text-positive" : "text-brand-950 dark:text-brand-300"}`}
       aria-label={`${up ? "Up" : "Down"} ${formatted} percent versus prior month`}
     >
       {up ? "↑" : "↓"} {formatted}% MoM
@@ -37,11 +37,13 @@ export function KpiCards({
       {items.map((item) => (
         <div key={item.key} className="card">
           <p className="field-label">{item.label}</p>
-          <p className="text-xl font-bold tabular-nums tracking-tight text-stone-900 sm:text-2xl">
+          <p className="text-xl font-bold tabular-nums tracking-tight text-ink sm:text-2xl">
             <Money minor={item.value} currency={currency} />
           </p>
-          {item.key !== "lifetime" ? <DeltaLabel delta={mom[item.key]} /> : (
-            <p className="mt-1 text-xs text-stone-400">Lifetime balance</p>
+          {item.key !== "lifetime" ? (
+            <DeltaLabel delta={mom[item.key]} />
+          ) : (
+            <p className="mt-1 text-xs text-ink-faint">Lifetime balance</p>
           )}
         </div>
       ))}

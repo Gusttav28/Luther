@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
 import { incomeEntrySchema, fieldErrors } from "@/lib/validation";
 import { GENERIC_ERROR, type ActionState } from "@/lib/action-state";
+import { safeMaterializeMonth } from "@/lib/queries/materialize";
 
 function parseForm(formData: FormData) {
   return incomeEntrySchema.safeParse({
@@ -30,7 +31,11 @@ export async function createIncomeAction(
     await prisma.incomeEntry.create({
       data: { userId, amountMinor: amount, ...rest },
     });
+    await safeMaterializeMonth(userId, rest.year, rest.month);
     revalidatePath("/income");
+    revalidatePath("/");
+    revalidatePath("/savings");
+    revalidatePath("/projects");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -52,7 +57,11 @@ export async function updateIncomeAction(
       data: { amountMinor: amount, ...rest },
     });
     if (result.count === 0) return GENERIC_ERROR;
+    await safeMaterializeMonth(userId, rest.year, rest.month);
     revalidatePath("/income");
+    revalidatePath("/");
+    revalidatePath("/savings");
+    revalidatePath("/projects");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -62,6 +71,16 @@ export async function updateIncomeAction(
 export async function deleteIncomeAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const id = String(formData.get("id") ?? "");
+  const existing = await prisma.incomeEntry.findFirst({
+    where: { id, userId },
+    select: { year: true, month: true },
+  });
   await prisma.incomeEntry.deleteMany({ where: { id, userId } });
+  if (existing) {
+    await safeMaterializeMonth(userId, existing.year, existing.month);
+  }
   revalidatePath("/income");
+  revalidatePath("/");
+  revalidatePath("/savings");
+  revalidatePath("/projects");
 }
