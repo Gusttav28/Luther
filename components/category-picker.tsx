@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   renameCategoryAction,
   setCategoryArchivedAction,
@@ -70,17 +70,16 @@ export function CategoryPicker({
   const categoryIdValue = mode === "existing" ? selectedId : "";
   const categoryNameValue = mode === "existing" ? (selected?.name ?? "") : newName.trim();
 
-  useEffect(() => {
-    if (mode !== "existing") return;
-    if (selectedId && categories.some((c) => c.id === selectedId)) return;
+  // Keep selection valid when the category list changes (adjust state during render).
+  if (mode === "existing" && !(selectedId && categories.some((c) => c.id === selectedId))) {
     const fallback = active[0]?.id ?? archived[0]?.id ?? "";
     if (!fallback) {
       setMode("new");
       setSelectedId("");
-      return;
+    } else if (selectedId !== fallback) {
+      setSelectedId(fallback);
     }
-    setSelectedId(fallback);
-  }, [categories, mode, selectedId, active, archived]);
+  }
 
   function handleSelectChange(value: string) {
     setEditing(false);

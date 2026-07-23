@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { copyExpensesMonthAction } from "./actions";
 import { initialActionState } from "@/lib/action-state";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -17,27 +17,32 @@ function previousMonth(year: number, month: number): { year: number; month: numb
  */
 export function ExportPlanButton({ year, month }: { year: number; month: number }) {
   const source = previousMonth(year, month);
-  const [state, formAction] = useActionState(copyExpensesMonthAction, initialActionState);
   const [popup, setPopup] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+  const [period, setPeriod] = useState({ year, month });
 
-  useEffect(() => {
+  // Reset popup when the viewed month changes (adjust state during render).
+  if (period.year !== year || period.month !== month) {
+    setPeriod({ year, month });
     setPopup(null);
-  }, [year, month]);
+  }
 
-  useEffect(() => {
+  async function formAction(formData: FormData) {
+    const state = await copyExpensesMonthAction(initialActionState, formData);
     if (state.ok) {
+      const fromYear = Number(formData.get("fromYear"));
+      const fromMonth = Number(formData.get("fromMonth"));
+      const toYear = Number(formData.get("toYear"));
+      const toMonth = Number(formData.get("toMonth"));
       setPopup({
         kind: "ok",
-        message: `Copied every expense from ${monthName(source.month)} ${source.year} into ${monthName(month)} ${year}. They are in the list below with Edit and Delete.`,
+        message: `Copied every expense from ${monthName(fromMonth)} ${fromYear} into ${monthName(toMonth)} ${toYear}. They are in the list below with Edit and Delete.`,
       });
       return;
     }
     if (state.errors?._form) {
       setPopup({ kind: "error", message: state.errors._form });
     }
-    // Intentionally keyed on `state` so month changes alone do not re-open a prior result.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- year/month read from latest render when state updates
-  }, [state]);
+  }
 
   return (
     <>
