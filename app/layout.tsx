@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const geist = Geist({
-  subsets: ["latin"],
+// Local font avoids a Google Fonts network fetch during `next dev` compile
+// (that fetch was hanging first-page compilation on this machine).
+const geist = localFont({
+  src: "./fonts/geist-latin.woff2",
   variable: "--font-geist",
   display: "swap",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
