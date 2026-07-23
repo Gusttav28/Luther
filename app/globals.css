@@ -62,6 +62,18 @@
     color: var(--luther-text);
     @apply font-sans;
   }
+
+  /*
+   * iOS Safari zooms the viewport when a focused form control is < 16px.
+   * Keep controls at least 1rem on small screens (utilities may still set text-xs/sm).
+   */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @layer components {
@@ -71,7 +83,7 @@
   }
 
   .field-input {
-    @apply w-full rounded-card border px-3 py-2 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1 disabled:opacity-50;
+    @apply w-full rounded-card border px-3 py-2 text-base shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1 disabled:opacity-50 sm:text-sm;
     background-color: var(--luther-input-bg);
     border-color: var(--luther-border-strong);
     color: var(--luther-input-text);
