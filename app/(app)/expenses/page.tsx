@@ -64,13 +64,20 @@ export default async function ExpensesPage({
 
   const filteredExpenses = data.expenses.filter((e) => expenseInHalf(e.date, period));
   const completedFiltered = filteredExpenses.filter((e) => e.completed);
-  const filteredTotalMinor = completedFiltered.reduce<number | null>((acc, e) => {
-    if (e.convertedMinor === null) return null;
-    if (acc === null) return null;
-    return acc + e.convertedMinor;
-  }, 0);
-  const displayTotal =
-    completedFiltered.some((e) => e.convertedMinor === null) ? null : filteredTotalMinor;
+
+  function sumConverted(
+    rows: typeof filteredExpenses
+  ): number | null {
+    let total: number | null = 0;
+    for (const row of rows) {
+      if (row.convertedMinor === null) return null;
+      if (total !== null) total += row.convertedMinor;
+    }
+    return total;
+  }
+
+  const displayTotal = sumConverted(completedFiltered);
+  const trackedTotalMinor = sumConverted(filteredExpenses);
 
   const defaultDate = `${year}-${String(month).padStart(2, "0")}-${
     year === now.getFullYear() && month === now.getMonth() + 1
@@ -101,6 +108,7 @@ export default async function ExpensesPage({
       period={period}
       expenseCount={filteredExpenses.length}
       displayTotal={displayTotal}
+      trackedTotalMinor={trackedTotalMinor}
       reportingCurrency={settings.reportingCurrency}
       usdToCrc={settings.rates.usdToCrc}
     >

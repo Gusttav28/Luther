@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreVertical } from "lucide-react";
 import {
   createExpenseAction,
@@ -14,6 +15,23 @@ import { Money } from "@/components/money";
 import { CategoryPicker, type CategoryOption } from "@/components/category-picker";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { ExpenseRow } from "@/lib/queries/expenses";
+
+const MENU_WIDTH = 160;
+const MENU_EST_HEIGHT = 140;
+
+function menuPositionFor(button: HTMLElement): { top: number; left: number } {
+  const rect = button.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const openUp = spaceBelow < MENU_EST_HEIGHT + 12;
+  const top = openUp
+    ? Math.max(8, rect.top - MENU_EST_HEIGHT - 4)
+    : Math.min(window.innerHeight - MENU_EST_HEIGHT - 8, rect.bottom + 4);
+  const left = Math.max(
+    8,
+    Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8)
+  );
+  return { top, left };
+}
 
 const ENTRY_CURRENCIES: Currency[] = ["CRC", "USD"];
 
@@ -192,6 +210,49 @@ export function ExpenseListRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  function closeMenu() {
+    setMenuOpen(false);
+    setMenuPos(null);
+  }
+
+  function toggleMenu() {
+    if (menuOpen) {
+      closeMenu();
+      return;
+    }
+    const button = menuButtonRef.current;
+    if (!button) return;
+    setMenuPos(menuPositionFor(button));
+    setMenuOpen(true);
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || menuButtonRef.current?.contains(target)) return;
+      closeMenu();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMenu();
+    };
+    const onRepositionClose = () => closeMenu();
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onRepositionClose);
+    window.addEventListener("scroll", onRepositionClose, true);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onRepositionClose);
+      window.removeEventListener("scroll", onRepositionClose, true);
+    };
+  }, [menuOpen]);
+
   if (editing) {
     return (
       <li className="py-3">
@@ -205,6 +266,53 @@ export function ExpenseListRow({
     month: "2-digit",
     year: "numeric",
   });
+
+  const menu =
+    menuOpen && menuPos && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            aria-label="Expense actions"
+            className="fixed z-50 w-40 rounded-xl border border-line bg-surface-elevated p-1 shadow-card md:hidden"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            <form action={setExpenseCompletedAction}>
+              <input type="hidden" name="id" value={expense.id} />
+              <input
+                type="hidden"
+                name="completed"
+                value={expense.completed ? "false" : "true"}
+              />
+              <PendingSubmitButton
+                idle={expense.completed ? "Mark pending" : "Mark done"}
+                className="w-full justify-start rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surface-muted"
+                pendingLabel="Saving"
+              />
+            </form>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                closeMenu();
+                setEditing(true);
+              }}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surface-muted"
+            >
+              Edit
+            </button>
+            <form action={deleteExpenseAction}>
+              <input type="hidden" name="id" value={expense.id} />
+              <PendingSubmitButton
+                idle="Delete"
+                className="w-full justify-start rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                pendingLabel="Deleting"
+              />
+            </form>
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
     <li
@@ -294,52 +402,20 @@ export function ExpenseListRow({
           </form>
         </div>
 
-        {/* Mobile ⋮ menu */}
-        <div className="relative md:hidden">
+        {/* Mobile ⋮ menu — portaled so list/card overflow cannot clip it */}
+        <div className="md:hidden">
           <button
+            ref={menuButtonRef}
             type="button"
             aria-label="Expense actions"
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            onClick={toggleMenu}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
           >
             <MoreVertical className="h-4 w-4" strokeWidth={1.75} aria-hidden />
           </button>
-          {menuOpen ? (
-            <div className="absolute right-0 z-10 mt-1 w-40 rounded-xl border border-line bg-surface-elevated p-1 shadow-card">
-              <form action={setExpenseCompletedAction}>
-                <input type="hidden" name="id" value={expense.id} />
-                <input
-                  type="hidden"
-                  name="completed"
-                  value={expense.completed ? "false" : "true"}
-                />
-                <PendingSubmitButton
-                  idle={expense.completed ? "Mark pending" : "Mark done"}
-                  className="w-full justify-start rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surface-muted"
-                  pendingLabel="Saving"
-                />
-              </form>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setEditing(true);
-                }}
-                className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surface-muted"
-              >
-                Edit
-              </button>
-              <form action={deleteExpenseAction}>
-                <input type="hidden" name="id" value={expense.id} />
-                <PendingSubmitButton
-                  idle="Delete"
-                  className="w-full justify-start rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                  pendingLabel="Deleting"
-                />
-              </form>
-            </div>
-          ) : null}
+          {menu}
         </div>
       </div>
     </li>

@@ -40,6 +40,7 @@ export function ExpensesTable({
   period,
   expenseCount,
   displayTotal,
+  trackedTotalMinor,
   reportingCurrency,
   usdToCrc,
   children,
@@ -51,6 +52,7 @@ export function ExpensesTable({
   period: HalfFilter;
   expenseCount: number;
   displayTotal: number | null;
+  trackedTotalMinor: number | null;
   reportingCurrency: Currency;
   usdToCrc: string | null;
   children: React.ReactNode;
@@ -67,8 +69,38 @@ export function ExpensesTable({
     });
   }
 
+  const donePercent =
+    displayTotal !== null && trackedTotalMinor !== null && trackedTotalMinor > 0
+      ? Math.min(100, Math.round((displayTotal / trackedTotalMinor) * 100))
+      : 0;
+
   return (
     <div className="space-y-3">
+      {/* Mobile: marked-done summary */}
+      <section
+        className="card !rounded-[20px] md:hidden"
+        aria-label="Marked done summary"
+      >
+        <h2 className="text-base font-semibold text-ink">Marked done</h2>
+        <p className="mt-0.5 text-xs text-ink-muted">Total paid so far this month</p>
+        <p className="mt-3 text-[28px] font-bold tracking-tight tabular-nums text-ink">
+          <Money minor={displayTotal} currency={reportingCurrency} />
+        </p>
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-surface-muted">
+          <div
+            className="h-full rounded-full bg-brand-700 transition-all dark:bg-brand-500"
+            style={{ width: `${donePercent}%` }}
+          />
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-muted">
+          <span>{donePercent}% of tracked</span>
+          <span className="inline-flex items-center gap-1 tabular-nums">
+            <Money minor={trackedTotalMinor} currency={reportingCurrency} />
+            <span>total</span>
+          </span>
+        </div>
+      </section>
+
       {/* Desktop category chips */}
       <div
         className="hidden flex-wrap items-center gap-2 md:flex"
@@ -98,7 +130,7 @@ export function ExpensesTable({
         ))}
       </div>
 
-      <div className="card relative overflow-hidden md:!rounded-[20px]">
+      <div className="card relative md:!rounded-[20px]">
         {/* Mobile filters */}
         <div className="mb-3 flex items-center gap-2 md:hidden">
           <label className="sr-only" htmlFor="expense-category-filter">
