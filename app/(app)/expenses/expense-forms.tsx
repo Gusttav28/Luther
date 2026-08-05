@@ -88,7 +88,7 @@ export function AddExpenseForm({
           </div>
 
           <div className="min-w-0 space-y-3">
-            <div className="min-w-0">
+            <div className="min-w-0 w-full">
               <label htmlFor={`${idPrefix}-date`} className="field-label">
                 Date
               </label>
@@ -101,7 +101,7 @@ export function AddExpenseForm({
               />
               {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 w-full">
               <label htmlFor={`${idPrefix}-currency`} className="field-label">
                 Currency
               </label>
