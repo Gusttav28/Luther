@@ -98,6 +98,17 @@
     box-sizing: border-box;
   }
 
+  .field-input[type="date"]::-webkit-datetime-edit {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .field-input[type="date"]::-webkit-calendar-picker-indicator {
+    margin-left: 0;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
   .field-input::placeholder {
     color: var(--luther-text-faint);
   }

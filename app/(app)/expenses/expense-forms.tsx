@@ -57,7 +57,7 @@ export function AddExpenseForm({
   return (
     <form action={formAction} className={sheet ? "space-y-4" : "card space-y-3"}>
       {sheet ? null : <h2 className="text-base font-semibold">Add expense</h2>}
-      <div className={`grid grid-cols-2 gap-3 ${sheet ? "" : "sm:grid-cols-3"}`}>
+      <div className={`grid min-w-0 grid-cols-2 gap-3 ${sheet ? "" : "sm:grid-cols-3"}`}>
         <div className="min-w-0">
           <label htmlFor={`${idPrefix}-name`} className="field-label">
             {sheet ? "Name" : "Expense name"}
@@ -83,7 +83,7 @@ export function AddExpenseForm({
           />
           {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
         </div>
-        <div className={sheet ? "col-span-2 min-w-0" : "min-w-0"}>
+        <div className="min-w-0 overflow-hidden">
           <label htmlFor={`${idPrefix}-date`} className="field-label">
             Date
           </label>
@@ -92,23 +92,23 @@ export function AddExpenseForm({
             name="date"
             type="date"
             defaultValue={defaultDate}
-            className="field-input min-w-0 max-w-full"
+            className="field-input !px-2 min-w-0 max-w-full"
           />
           {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
         </div>
-        <div className={sheet ? "col-span-2 min-w-0" : "min-w-0"}>
+        <div className="min-w-0 overflow-hidden">
           <label htmlFor={`${idPrefix}-currency`} className="field-label">
             Currency
           </label>
           <select
             id={`${idPrefix}-currency`}
             name="currency"
-            className="field-input min-w-0 max-w-full"
+            className="field-input !px-2 min-w-0 max-w-full"
             defaultValue="CRC"
           >
             {ENTRY_CURRENCIES.map((c) => (
               <option key={c} value={c}>
-                {CURRENCY_LABELS[c]}
+                {sheet ? c : CURRENCY_LABELS[c]}
               </option>
             ))}
           </select>
