@@ -51,11 +51,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       {/* Mobile header */}
       <header className="flex items-center justify-between border-b border-line bg-surface-card px-4 py-3 md:hidden">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5">
           <LutherLogo size="sm" />
           <span className="text-lg font-bold tracking-tight text-brand-950 dark:text-brand-300">
             Luther
           </span>
+          <ThemeToggle compact />
         </div>
         <form
           action={async () => {
