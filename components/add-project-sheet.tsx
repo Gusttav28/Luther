@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { X } from "lucide-react";
 import { AddProjectForm } from "@/app/(app)/projects/project-forms";
 
@@ -12,11 +12,9 @@ export function AddProjectSheet({
   onClose: () => void;
 }) {
   const titleId = useId();
-  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     if (!open) return;
-    setFormKey((k) => k + 1);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -63,7 +61,7 @@ export function AddProjectSheet({
             <X className="h-4 w-4" strokeWidth={2} aria-hidden />
           </button>
         </div>
-        <AddProjectForm key={formKey} variant="sheet" onSuccess={onClose} />
+        <AddProjectForm variant="sheet" onSuccess={onClose} />
       </div>
     </div>
   );

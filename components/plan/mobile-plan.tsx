@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Money } from "@/components/money";
 import { BarChart } from "@/components/charts/bar-chart";
@@ -76,16 +76,17 @@ export function MobilePlan({
   allocationCenterLabel: string;
 }) {
   const now = useMemo(() => new Date(), []);
-  const defaultMonthIndex =
-    year === now.getFullYear() ? now.getMonth() : 0;
+  const defaultMonthIndex = year === now.getFullYear() ? now.getMonth() : 0;
 
   const [chartMode, setChartMode] = useState<ChartMode>("trend");
   const [planMode, setPlanMode] = useState<PlanMode>("grid");
   const [monthIndex, setMonthIndex] = useState(defaultMonthIndex);
+  const [monthYear, setMonthYear] = useState(year);
 
-  useEffect(() => {
+  if (monthYear !== year) {
+    setMonthYear(year);
     setMonthIndex(year === now.getFullYear() ? now.getMonth() : 0);
-  }, [year, now]);
+  }
 
   const circleBtn =
     "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface-card text-ink transition hover:border-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 dark:ring-offset-neutral-950";

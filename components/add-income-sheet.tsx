@@ -18,11 +18,9 @@ export function AddIncomeSheet({
   defaultPeriod?: "H1" | "H2";
 }) {
   const titleId = useId();
-  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     if (!open) return;
-    setFormKey((k) => k + 1);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -70,7 +68,6 @@ export function AddIncomeSheet({
           </button>
         </div>
         <AddIncomeForm
-          key={formKey}
           year={year}
           month={month}
           variant="sheet"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { X } from "lucide-react";
 import { AddSavingsForm } from "@/app/(app)/savings/savings-forms";
 
@@ -14,11 +14,9 @@ export function AddSavingsSheet({
   onClose: () => void;
 }) {
   const titleId = useId();
-  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     if (!open) return;
-    setFormKey((k) => k + 1);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -65,12 +63,7 @@ export function AddSavingsSheet({
             <X className="h-4 w-4" strokeWidth={2} aria-hidden />
           </button>
         </div>
-        <AddSavingsForm
-          key={formKey}
-          defaultDate={defaultDate}
-          variant="sheet"
-          onSuccess={onClose}
-        />
+        <AddSavingsForm defaultDate={defaultDate} variant="sheet" onSuccess={onClose} />
       </div>
     </div>
   );
