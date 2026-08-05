@@ -77,10 +77,18 @@ export function AddExpenseSheetProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
     return () => {
-      document.body.style.overflow = prev;
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.overscrollBehavior = prevBodyOverscroll;
     };
   }, [open]);
 
@@ -93,7 +101,10 @@ export function AddExpenseSheetProvider({ children }: { children: ReactNode }) {
     <AddExpenseSheetContext.Provider value={value}>
       {children}
       {open && formConfig ? (
-        <div className="fixed inset-0 z-40 md:hidden" role="presentation">
+        <div
+          className="fixed inset-0 z-40 overflow-hidden overscroll-none md:hidden"
+          role="presentation"
+        >
           <button
             type="button"
             aria-label="Dismiss add expense"
@@ -104,7 +115,7 @@ export function AddExpenseSheetProvider({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-[28px] bg-surface-card px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_40px_rgba(0,0,0,0.18)]"
+            className="absolute inset-x-0 bottom-0 max-h-[90dvh] w-full max-w-[100vw] overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[28px] bg-surface-card px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_40px_rgba(0,0,0,0.18)]"
           >
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden />
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -115,18 +126,20 @@ export function AddExpenseSheetProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={closeAddExpense}
                 aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-muted text-ink-muted transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink-muted transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
               >
                 <X className="h-4 w-4" strokeWidth={2} aria-hidden />
               </button>
             </div>
-            <AddExpenseForm
-              key={formKey}
-              categories={formConfig.categories}
-              defaultDate={formConfig.defaultDate}
-              variant="sheet"
-              onSuccess={closeAddExpense}
-            />
+            <div className="min-w-0 max-w-full overflow-x-hidden">
+              <AddExpenseForm
+                key={formKey}
+                categories={formConfig.categories}
+                defaultDate={formConfig.defaultDate}
+                variant="sheet"
+                onSuccess={closeAddExpense}
+              />
+            </div>
           </div>
         </div>
       ) : null}

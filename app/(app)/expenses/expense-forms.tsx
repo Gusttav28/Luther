@@ -55,7 +55,10 @@ export function AddExpenseForm({
   }, [state.ok, onSuccess]);
 
   return (
-    <form action={formAction} className={sheet ? "space-y-4" : "card space-y-3"}>
+    <form
+      action={formAction}
+      className={sheet ? "min-w-0 max-w-full space-y-4 overflow-x-hidden" : "card space-y-3"}
+    >
       {sheet ? null : <h2 className="text-base font-semibold">Add expense</h2>}
       {sheet ? (
         <div className="min-w-0 space-y-3">
@@ -88,7 +91,7 @@ export function AddExpenseForm({
           </div>
 
           <div className="min-w-0 space-y-3">
-            <div className="min-w-0 w-full">
+            <div className="min-w-0 w-full overflow-hidden">
               <label htmlFor={`${idPrefix}-date`} className="field-label">
                 Date
               </label>
@@ -97,7 +100,7 @@ export function AddExpenseForm({
                 name="date"
                 type="date"
                 defaultValue={defaultDate}
-                className="field-input"
+                className="field-input sheet-date-input"
               />
               {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
             </div>
