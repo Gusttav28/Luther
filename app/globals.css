@@ -98,15 +98,30 @@
     box-sizing: border-box;
   }
 
-  .field-input[type="date"]::-webkit-datetime-edit {
-    min-width: 0;
-    overflow: hidden;
+  .sheet-date-input {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
-  .field-input[type="date"]::-webkit-calendar-picker-indicator {
-    margin-left: 0;
+  .sheet-date-input::-webkit-date-and-time-value {
+    text-align: left;
+  }
+
+  .sheet-date-input::-webkit-datetime-edit {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     padding: 0;
-    flex-shrink: 0;
+  }
+
+  .sheet-date-input::-webkit-calendar-picker-indicator {
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    padding: 0;
+    width: 1rem;
+    height: 1rem;
   }
 
   .field-input::placeholder {

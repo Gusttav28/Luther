@@ -57,70 +57,143 @@ export function AddExpenseForm({
   return (
     <form action={formAction} className={sheet ? "space-y-4" : "card space-y-3"}>
       {sheet ? null : <h2 className="text-base font-semibold">Add expense</h2>}
-      <div className={`grid min-w-0 grid-cols-2 gap-3 ${sheet ? "" : "sm:grid-cols-3"}`}>
-        <div className="min-w-0">
-          <label htmlFor={`${idPrefix}-name`} className="field-label">
-            {sheet ? "Name" : "Expense name"}
-          </label>
-          <input
-            id={`${idPrefix}-name`}
-            name="name"
-            placeholder={sheet ? "e.g. Groceries" : "e.g. Groceries at Walmart"}
-            className="field-input"
-          />
-          {state.errors?.name && <p className="error-text">{state.errors.name}</p>}
+      {sheet ? (
+        <div className="min-w-0 space-y-3">
+          <div className="grid min-w-0 grid-cols-2 gap-2.5">
+            <div className="min-w-0">
+              <label htmlFor={`${idPrefix}-name`} className="field-label">
+                Name
+              </label>
+              <input
+                id={`${idPrefix}-name`}
+                name="name"
+                placeholder="e.g. Groceries"
+                className="field-input !px-2.5 !py-2 !text-sm"
+              />
+              {state.errors?.name && <p className="error-text">{state.errors.name}</p>}
+            </div>
+            <div className="min-w-0">
+              <label htmlFor={`${idPrefix}-amount`} className="field-label">
+                Amount
+              </label>
+              <input
+                id={`${idPrefix}-amount`}
+                name="amount"
+                inputMode="decimal"
+                placeholder="0.00"
+                className="field-input !px-2.5 !py-2 !text-sm"
+              />
+              {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-end gap-2.5">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <label htmlFor={`${idPrefix}-date`} className="field-label">
+                Date
+              </label>
+              <input
+                id={`${idPrefix}-date`}
+                name="date"
+                type="date"
+                defaultValue={defaultDate}
+                className="field-input sheet-date-input !px-2 !py-2 !text-sm"
+              />
+              {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
+            </div>
+            <div className="w-[4.75rem] shrink-0">
+              <label htmlFor={`${idPrefix}-currency`} className="field-label">
+                Currency
+              </label>
+              <select
+                id={`${idPrefix}-currency`}
+                name="currency"
+                className="field-input !px-1.5 !py-2 !text-sm"
+                defaultValue="CRC"
+              >
+                {ENTRY_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <CategoryPicker
+              categories={categories}
+              errors={state.errors}
+              idPrefix="sheet-add-expense-cat"
+            />
+          </div>
         </div>
-        <div className="min-w-0">
-          <label htmlFor={`${idPrefix}-amount`} className="field-label">
-            Amount
-          </label>
-          <input
-            id={`${idPrefix}-amount`}
-            name="amount"
-            inputMode="decimal"
-            placeholder="0.00"
-            className="field-input"
-          />
-          {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
+      ) : (
+        <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-name`} className="field-label">
+              Expense name
+            </label>
+            <input
+              id={`${idPrefix}-name`}
+              name="name"
+              placeholder="e.g. Groceries at Walmart"
+              className="field-input"
+            />
+            {state.errors?.name && <p className="error-text">{state.errors.name}</p>}
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-amount`} className="field-label">
+              Amount
+            </label>
+            <input
+              id={`${idPrefix}-amount`}
+              name="amount"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="field-input"
+            />
+            {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-date`} className="field-label">
+              Date
+            </label>
+            <input
+              id={`${idPrefix}-date`}
+              name="date"
+              type="date"
+              defaultValue={defaultDate}
+              className="field-input"
+            />
+            {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-currency`} className="field-label">
+              Currency
+            </label>
+            <select
+              id={`${idPrefix}-currency`}
+              name="currency"
+              className="field-input"
+              defaultValue="CRC"
+            >
+              {ENTRY_CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {CURRENCY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-span-2 min-w-0">
+            <CategoryPicker
+              categories={categories}
+              errors={state.errors}
+              idPrefix="add-expense-cat"
+            />
+          </div>
         </div>
-        <div className="min-w-0 overflow-hidden">
-          <label htmlFor={`${idPrefix}-date`} className="field-label">
-            Date
-          </label>
-          <input
-            id={`${idPrefix}-date`}
-            name="date"
-            type="date"
-            defaultValue={defaultDate}
-            className="field-input !px-2 min-w-0 max-w-full"
-          />
-          {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
-        </div>
-        <div className="min-w-0 overflow-hidden">
-          <label htmlFor={`${idPrefix}-currency`} className="field-label">
-            Currency
-          </label>
-          <select
-            id={`${idPrefix}-currency`}
-            name="currency"
-            className="field-input !px-2 min-w-0 max-w-full"
-            defaultValue="CRC"
-          >
-            {ENTRY_CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {sheet ? c : CURRENCY_LABELS[c]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-span-2 min-w-0">
-          <CategoryPicker
-            categories={categories}
-            errors={state.errors}
-            idPrefix={sheet ? "sheet-add-expense-cat" : "add-expense-cat"}
-          />
-        </div>
-      </div>
+      )}
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
       <PendingSubmitButton
         idle="Add expense"
