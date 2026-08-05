@@ -18,6 +18,7 @@ export function DonutChart({
   centerLabel,
   centerSubLabel,
   emptyMessage = "No data for this period.",
+  embedded = false,
 }: {
   title: string;
   subtitle?: string;
@@ -26,73 +27,91 @@ export function DonutChart({
   centerLabel: string;
   centerSubLabel?: string;
   emptyMessage?: string;
+  /** Skip outer card chrome when nested in another card. */
+  embedded?: boolean;
 }) {
   const active = segments.filter((s) => s.value > 0);
   const total = active.reduce((acc, s) => acc + s.value, 0);
   const empty = total <= 0 || active.length === 0;
 
+  const body = empty ? (
+    <div className="flex h-40 items-center justify-center rounded-lg surface-muted text-sm text-ink-faint">
+      {emptyMessage}
+    </div>
+  ) : (
+    <div
+      className={`flex flex-col items-center gap-4 ${embedded ? "" : "sm:flex-row"}`}
+    >
+      <div className={`relative shrink-0 ${embedded ? "h-44 w-44" : "h-48 w-48"}`}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={active}
+              dataKey="value"
+              nameKey="name"
+              innerRadius="62%"
+              outerRadius="88%"
+              paddingAngle={2}
+              stroke="none"
+            >
+              {active.map((s) => (
+                <Cell key={s.key} fill={s.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                background: "var(--chart-surface)",
+                borderColor: "var(--chart-border)",
+                color: "var(--chart-text)",
+              }}
+              formatter={(value) =>
+                typeof value === "number" ? formatMinor(value, currency) : "—"
+              }
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+          {centerSubLabel && (
+            <span className="text-[10px] font-medium uppercase tracking-wide text-ink-muted">
+              {centerSubLabel}
+            </span>
+          )}
+          <span className="text-sm font-bold tabular-nums text-ink">{centerLabel}</span>
+        </div>
+      </div>
+      <ul className="w-full space-y-2 text-sm">
+        {active.map((s) => (
+          <li key={s.key} className="flex items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-2 text-ink-secondary">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: s.color }}
+                aria-hidden
+              />
+              {s.name}
+            </span>
+            <span className="tabular-nums text-ink-muted">
+              {((s.value / total) * 100).toFixed(0)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="mt-4" aria-label={title}>
+        {body}
+      </div>
+    );
+  }
+
   return (
     <section className="card h-full min-h-[280px]" aria-label={title}>
       <h2 className="section-title mb-1">{title}</h2>
       {subtitle && <p className="mb-4 text-xs text-ink-muted">{subtitle}</p>}
-      {empty ? (
-        <div className="flex h-48 items-center justify-center rounded-lg surface-muted text-sm text-ink-faint">
-          {emptyMessage}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-4 sm:flex-row">
-          <div className="relative h-48 w-48 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={active}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="62%"
-                  outerRadius="88%"
-                  paddingAngle={2}
-                  stroke="none"
-                >
-                  {active.map((s) => (
-                    <Cell key={s.key} fill={s.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ background: "var(--chart-surface)", borderColor: "var(--chart-border)", color: "var(--chart-text)" }}
-                  formatter={(value) =>
-                    typeof value === "number" ? formatMinor(value, currency) : "—"
-                  }
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-              {centerSubLabel && (
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-ink-muted">
-                    {centerSubLabel}
-                  </span>
-                )}
-              <span className="text-sm font-bold tabular-nums text-ink">{centerLabel}</span>
-            </div>
-          </div>
-          <ul className="w-full space-y-2 text-sm">
-            {active.map((s) => (
-              <li key={s.key} className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2 text-ink-secondary">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: s.color }}
-                    aria-hidden
-                  />
-                  {s.name}
-                </span>
-                <span className="tabular-nums text-ink-muted">
-                  {((s.value / total) * 100).toFixed(0)}%
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {body}
     </section>
   );
 }

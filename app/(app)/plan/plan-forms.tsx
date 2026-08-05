@@ -38,11 +38,13 @@ export function PlanCellInput({
   year,
   month,
   valueMinor,
+  inputClassName,
 }: {
   categoryId: string;
   year: number;
   month: number;
   valueMinor: number | null;
+  inputClassName?: string;
 }) {
   const [state, formAction] = useActionState(setPlanCellAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -59,9 +61,9 @@ export function PlanCellInput({
         inputMode="decimal"
         defaultValue={defaultValue}
         aria-label={`Plan for month ${month}`}
-        className={`w-20 rounded border bg-surface-card px-1.5 py-1 text-right text-xs tabular-nums text-ink focus:border-brand-500 focus:outline-none ${
-          state.errors ? "border-red-400" : "border-line-strong"
-        }`}
+        className={`rounded border bg-surface-card px-1.5 py-1 text-right text-xs tabular-nums text-ink focus:border-brand-500 focus:outline-none ${
+          inputClassName ?? "w-20"
+        } ${state.errors ? "border-red-400" : "border-line-strong"}`}
         onBlur={(e) => {
           if (e.target.value !== defaultValue) formRef.current?.requestSubmit();
         }}

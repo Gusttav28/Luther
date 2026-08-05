@@ -9,64 +9,188 @@ import type { IncomeRow } from "@/lib/queries/income";
 
 const ENTRY_CURRENCIES: Currency[] = ["CRC", "USD"];
 
-export function AddIncomeForm({ year, month }: { year: number; month: number }) {
+export function AddIncomeForm({
+  year,
+  month,
+  variant = "card",
+  defaultPeriod = "H1",
+  onSuccess,
+}: {
+  year: number;
+  month: number;
+  variant?: "card" | "sheet";
+  defaultPeriod?: "H1" | "H2";
+  onSuccess?: () => void;
+}) {
   const [state, formAction] = useActionState(createIncomeAction, initialActionState);
+  const [period, setPeriod] = useState<"H1" | "H2">(defaultPeriod);
+  const sheet = variant === "sheet";
+  const idPrefix = sheet ? "sheet-income" : "income";
+
+  useEffect(() => {
+    if (state.ok) onSuccess?.();
+  }, [state.ok, onSuccess]);
+
   return (
-    <form action={formAction} className="card space-y-3">
-      <h2 className="text-base font-semibold">Add income</h2>
+    <form action={formAction} className={sheet ? "space-y-4" : "card space-y-3"}>
+      {sheet ? null : <h2 className="text-base font-semibold">Add income</h2>}
       <input type="hidden" name="year" value={year} />
       <input type="hidden" name="month" value={month} />
-      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-4">
-        <div className="min-w-0">
-          <label htmlFor="income-period" className="field-label whitespace-nowrap">
-            Period
-          </label>
-          <select id="income-period" name="period" className="field-input" defaultValue="H1">
-            <option value="H1">H1 (1–15)</option>
-            <option value="H2">H2 (16–end)</option>
-          </select>
+      <input type="hidden" name="period" value={period} />
+
+      {sheet ? (
+        <div>
+          <p className="field-label">Period</p>
+          <div
+            className="mt-1.5 grid grid-cols-2 gap-2"
+            role="group"
+            aria-label="Income period"
+          >
+            {(
+              [
+                { key: "H1", label: "H1 (1–15)" },
+                { key: "H2", label: "H2 (16–end)" },
+              ] as const
+            ).map((opt) => {
+              const selected = period === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setPeriod(opt.key)}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
+                    selected
+                      ? "border-brand-700 bg-brand-50 text-brand-900 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-100"
+                      : "border-line bg-surface-card text-ink-secondary"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
           {state.errors?.period && <p className="error-text">{state.errors.period}</p>}
         </div>
-        <div className="min-w-0">
-          <label htmlFor="income-amount" className="field-label whitespace-nowrap">
-            Amount
-          </label>
-          <input
-            id="income-amount"
-            name="amount"
-            inputMode="decimal"
-            placeholder="0.00"
-            className="field-input"
-          />
-          {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
+      ) : (
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-4">
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-period`} className="field-label whitespace-nowrap">
+              Period
+            </label>
+            <select
+              id={`${idPrefix}-period`}
+              className="field-input"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as "H1" | "H2")}
+            >
+              <option value="H1">H1 (1–15)</option>
+              <option value="H2">H2 (16–end)</option>
+            </select>
+            {state.errors?.period && <p className="error-text">{state.errors.period}</p>}
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-amount`} className="field-label whitespace-nowrap">
+              Amount
+            </label>
+            <input
+              id={`${idPrefix}-amount`}
+              name="amount"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="field-input"
+            />
+            {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-currency`} className="field-label whitespace-nowrap">
+              Currency
+            </label>
+            <select
+              id={`${idPrefix}-currency`}
+              name="currency"
+              className="field-input"
+              defaultValue="CRC"
+            >
+              {ENTRY_CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {CURRENCY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`${idPrefix}-label`} className="field-label whitespace-nowrap">
+              Label (optional)
+            </label>
+            <input
+              id={`${idPrefix}-label`}
+              name="label"
+              className="field-input"
+              placeholder="Source"
+            />
+          </div>
         </div>
-        <div className="min-w-0">
-          <label htmlFor="income-currency" className="field-label whitespace-nowrap">
-            Currency
-          </label>
-          <select id="income-currency" name="currency" className="field-input" defaultValue="CRC">
-            {ENTRY_CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {CURRENCY_LABELS[c]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-0">
-          <label htmlFor="income-label" className="field-label whitespace-nowrap">
-            Label (optional)
-          </label>
-          <input id="income-label" name="label" className="field-input" placeholder="Source" />
-        </div>
-      </div>
-      <label className="flex items-center gap-2 text-sm text-stone-600">
-        <input type="checkbox" name="planned" className="rounded border-stone-300" />
+      )}
+
+      {sheet ? (
+        <>
+          <div>
+            <label htmlFor={`${idPrefix}-amount`} className="field-label">
+              Amount
+            </label>
+            <input
+              id={`${idPrefix}-amount`}
+              name="amount"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="field-input"
+            />
+            {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
+          </div>
+          <div>
+            <label htmlFor={`${idPrefix}-currency`} className="field-label">
+              Currency
+            </label>
+            <select
+              id={`${idPrefix}-currency`}
+              name="currency"
+              className="field-input"
+              defaultValue="CRC"
+            >
+              {ENTRY_CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {CURRENCY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`${idPrefix}-label`} className="field-label">
+              Label (optional)
+            </label>
+            <input
+              id={`${idPrefix}-label`}
+              name="label"
+              className="field-input"
+              placeholder="Source"
+            />
+          </div>
+        </>
+      ) : null}
+
+      <label className="flex items-center gap-2 text-sm text-ink-secondary">
+        <input type="checkbox" name="planned" className="rounded border-line" />
         Planned (not yet received)
       </label>
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
       <PendingSubmitButton
         idle="Add income"
-        className="btn-primary min-w-[7rem]"
+        className={
+          sheet
+            ? "btn-primary w-full !rounded-xl !bg-neutral-900 py-3 text-base font-semibold dark:!bg-neutral-100 dark:!text-neutral-900"
+            : "btn-primary min-w-[7rem]"
+        }
         pendingLabel="Adding"
       />
     </form>

@@ -15,11 +15,13 @@ export function CompositionDonut({
   spent,
   saved,
   currency,
+  embedded = false,
 }: {
   earned: number | null;
   spent: number | null;
   saved: number | null;
   currency: Currency;
+  embedded?: boolean;
 }) {
   const segments = [
     { key: "earned", name: "Earned", value: earned !== null ? Math.abs(earned) : 0, color: COLORS.earned },
@@ -45,6 +47,7 @@ export function CompositionDonut({
       centerLabel={centerLabel}
       centerSubLabel={centerSubLabel}
       emptyMessage="No composition data for this month."
+      embedded={embedded}
     />
   );
 }

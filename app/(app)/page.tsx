@@ -10,6 +10,7 @@ import { CompositionDonut } from "@/components/overview/composition-donut";
 import { HalfMonthSchedule } from "@/components/overview/half-month-schedule";
 import { ProjectsProgress } from "@/components/overview/projects-progress";
 import { OverviewRefresh } from "@/components/overview/overview-refresh";
+import { MobileOverview } from "@/components/overview/mobile-overview";
 import { currentPeriod, monthName, type HalfPeriod } from "@/lib/periods";
 
 export const dynamic = "force-dynamic";
@@ -55,47 +56,63 @@ export default async function OverviewPage({
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 overflow-x-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">Overview</h1>
-          <p className="mt-0.5 text-sm text-ink-muted">
-            {monthName(month)} {year} · Finance analytics
-          </p>
+    <div className="mx-auto max-w-7xl overflow-x-hidden">
+      <MobileOverview
+        year={year}
+        month={month}
+        currency={settings.reportingCurrency}
+        usdToCrc={settings.rates.usdToCrc}
+        kpis={kpis}
+        mom={mom}
+        cashflow={cashflow}
+        spentByCategory={spentByCategory}
+        overview={overview}
+        highlightPeriod={highlightPeriod}
+        projects={projectsView.projects}
+      />
+
+      <div className="hidden space-y-6 md:block">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="page-title">Overview</h1>
+            <p className="mt-0.5 text-sm text-ink-muted">
+              {monthName(month)} {year} · Finance analytics
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <MonthPicker year={year} month={month} basePath="/" />
+            <OverviewRefresh year={year} month={month} />
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <MonthPicker year={year} month={month} basePath="/" />
-          <OverviewRefresh year={year} month={month} />
+
+        <KpiCards items={kpis} currency={settings.reportingCurrency} mom={mom} />
+
+        <div className="grid gap-4 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <CashflowChart points={cashflow} currency={settings.reportingCurrency} />
+          </div>
+          <div className="lg:col-span-2">
+            <SpentByCategory data={spentByCategory} currency={settings.reportingCurrency} />
+          </div>
         </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <CompositionDonut
+            earned={overview.earned}
+            spent={overview.spent}
+            saved={overview.saved}
+            currency={settings.reportingCurrency}
+          />
+          <HalfMonthSchedule
+            perPeriod={overview.perPeriod}
+            currency={settings.reportingCurrency}
+            highlightPeriod={highlightPeriod}
+          />
+          <ProjectsProgress projects={projectsView.projects} />
+        </div>
+
+        <RatesNote usdToCrc={settings.rates.usdToCrc} />
       </div>
-
-      <KpiCards items={kpis} currency={settings.reportingCurrency} mom={mom} />
-
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <CashflowChart points={cashflow} currency={settings.reportingCurrency} />
-        </div>
-        <div className="lg:col-span-2">
-          <SpentByCategory data={spentByCategory} currency={settings.reportingCurrency} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <CompositionDonut
-          earned={overview.earned}
-          spent={overview.spent}
-          saved={overview.saved}
-          currency={settings.reportingCurrency}
-        />
-        <HalfMonthSchedule
-          perPeriod={overview.perPeriod}
-          currency={settings.reportingCurrency}
-          highlightPeriod={highlightPeriod}
-        />
-        <ProjectsProgress projects={projectsView.projects} />
-      </div>
-
-      <RatesNote usdToCrc={settings.rates.usdToCrc} />
     </div>
   );
 }

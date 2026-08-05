@@ -1,11 +1,17 @@
 import Link from "next/link";
 import type { ProjectView } from "@/lib/queries/projects";
 
-export function ProjectsProgress({ projects }: { projects: ProjectView[] }) {
+export function ProjectsProgress({
+  projects,
+  compact = false,
+}: {
+  projects: ProjectView[];
+  compact?: boolean;
+}) {
   const active = projects.filter((p) => !p.completedAt);
 
   return (
-    <section className="card h-full">
+    <section className={`card h-full ${compact ? "!rounded-[20px]" : ""}`}>
       <div className="mb-4 flex items-center justify-between gap-2">
         <div>
           <h2 className="section-title">Projects funded</h2>

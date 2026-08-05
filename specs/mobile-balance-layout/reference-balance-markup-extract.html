@@ -1,0 +1,187 @@
+u002Fa>
+  </div>
+
+  <div style="padding:6px 22px 18px">
+    <h1 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;letter-spacing:-0.01em;color:#141715">Balance</h1>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:18px 20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;color:#8a988f;text-transform:uppercase">Starting balance</div>
+          <sc-if value="{{ editingStart }}" hint-placeholder-val="{{ false }}">
+            <input value="{{ startInput }}" sc-camel-on-change="{{ setStartInput }}" sc-camel-on-blur="{{ commitStart }}" sc-camel-auto-focus="{{ true }}" style="margin-top:4px;width:100%;box-sizing:border-box;height:32px;border:1px solid #2d6a4f;border-radius:7px;padding:0 8px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;color:#141715">
+          </sc-if>
+          <sc-if value="{{ notEditingStart }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#141715;margin-top:4px">{{ startingBalanceFmt }}</div>
+            <button sc-camel-on-click="{{ startEditing }}" style="border:none;background:transparent;color:#2d6a4f;font-size:12px;font-weight:600;padding:0;margin-top:4px;cursor:pointer">Edit</button>
+          </sc-if>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;color:#8a988f;text-transform:uppercase">Current balance</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:{{ currentBalanceColor }};margin-top:4px">{{ currentBalanceFmt }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Running balance</h3>
+      <p style="margin:4px 0 16px;font-size:12px;color:#8a988f">Balance by half-month period</p>
+      <svg sc-camel-view-box="0 0 300 140" width="100%" height="140" style="overflow:visible">
+        <line x1="0" y1="8" x2="300" y2="8" stroke="rgba(20,30,25,.08)" stroke-dasharray="2 4"></line>
+        <line x1="0" y1="70" x2="300" y2="70" stroke="rgba(20,30,25,.14)"></line>
+        <line x1="0" y1="132" x2="300" y2="132" stroke="rgba(20,30,25,.08)" stroke-dasharray="2 4"></line>
+        <path d="{{ balancePath }}" fill="none" stroke="#2d6a4f" stroke-width="2.5"></path>
+        <sc-for list="{{ balancePoints }}" as="p" hint-placeholder-count="5">
+          <circle cx="{{ p.x }}" cy="{{ p.y }}" r="3" fill="#2d6a4f"></circle>
+        </sc-for>
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:2px">
+        <sc-for list="{{ periods }}" as="pr" hint-placeholder-count="5">
+          <span style="font-size:8.5px;color:#8a988f;text-align:center;flex:1">{{ pr.shortLabel }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Income versus expenses</h3>
+      <p style="margin:4px 0 16px;font-size:12px;color:#8a988f">Half-month totals</p>
+      <svg sc-camel-view-box="0 0 300 140" width="100%" height="140">
+        <line x1="0" y1="8" x2="300" y2="8" stroke="rgba(20,30,25,.08)" stroke-dasharray="2 4"></line>
+        <line x1="0" y1="60" x2="300" y2="60" stroke="rgba(20,30,25,.08)" stroke-dasharray="2 4"></line>
+        <line x1="0" y1="112" x2="300" y2="112" stroke="rgba(20,30,25,.08)"></line>
+        <sc-for list="{{ ieBars }}" as="b" hint-placeholder-count="5">
+          <rect x="{{ b.incomeX }}" y="{{ b.incomeY }}" width="{{ b.w }}" height="{{ b.incomeH }}" rx="2" fill="#2d6a4f"></rect>
+          <rect x="{{ b.expenseX }}" y="{{ b.expenseY }}" width="{{ b.w }}" height="{{ b.expenseH }}" rx="2" fill="#b7c2bb"></rect>
+        </sc-for>
+      </svg>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:11.5px;color:#7a8a80">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#2d6a4f;display:inline-block"></span>Income</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#b7c2bb;display:inline-block"></span>Expenses</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 100px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Running balance by half-month</h3>
+      <p style="margin:4px 0 16px;font-size:12px;color:#8a988f">Tap a period to see its breakdown</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ periods }}" as="pr" hint-placeholder-count="5">
+          <div sc-camel-on-click="{{ pr.toggle }}" style="background:{{ pr.bg }};border-radius:14px;padding:14px;cursor:pointer">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;color:#141715">{{ pr.label }}</span>
+              <span style="font-weight:700;font-size:14px;color:{{ pr.balanceColor }}">{{ pr.balanceFmt }}</span>
+            </div>
+            <sc-if value="{{ pr.expanded }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(20,30,25,.08)">
+                <div><div style="font-size:10px;color:#8a988f;text-transform:uppercase;letter-spacing:.04em">Income</div><div style="font-size:12.5px;font-weight:600;color:#141715;margin-top:3px">{{ pr.incomeFmt }}</div></div>
+                <div><div style="font-size:10px;color:#8a988f;text-transform:uppercase;letter-spacing:.04em">Expenses</div><div style="font-size:12.5px;font-weight:600;color:#b3423a;margin-top:3px">{{ pr.expensesFmt }}</div></div>
+                <div><div style="font-size:10px;color:#8a988f;text-transform:uppercase;letter-spacing:.04em">Net</div><div style="font-size:12.5px;font-weight:600;color:{{ pr.netColor }};margin-top:3px">{{ pr.netFmt }}</div></div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center">
+    <div style="background:#171a18;border-radius:24px;padding:6px;display:flex;align-items:center;gap:2px;box-shadow:0 10px 24px rgba(0,0,0,.25)">
+      <span style="padding:10px;border-radius:18px;color:#c7cfc9;display:flex"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg></span>
+      <span style="padding:10px;border-radius:18px;color:#c7cfc9;display:flex"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></span>
+      <span style="padding:10px;border-radius:18px;color:#c7cfc9;display:flex"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"></path></svg></span>
+      <span style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:18px;background:#2d6a4f;color:#fff;font-size:13px;font-weight:600"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>More</span>
+      <div style="width:32px;height:32px;border-radius:50%;background:#2d6a4f;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;margin-left:2px">N</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{}">
+const CEDI = "\u00A2";
+function fmt(n) {
+  const neg = n < 0;
+  const v = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (neg ? "-" : "") + CEDI + v;
+}
+const BASE_PERIODS = [
+  { label: "Jul 1â15, 2026", shortLabel: "Jul 1â15", income: 232000, expenses: 239996 },
+  { label: "Jul 16â31, 2026", shortLabel: "Jul 16â31", income: 291000, expenses: 57055 },
+  { label: "Aug 1â15, 2026", shortLabel: "Aug 1â15", income: 0, expenses: 5000 },
+  { label: "Sep 1â15, 2026", shortLabel: "Sep 1â15", income: 0, expenses: 239996 },
+  { label: "Sep 16â30, 2026", shortLabel: "Sep 16â30", income: 0, expenses: 57035 }
+];
+
+class Component extends DCLogic {
+  state = {
+    startingBalance: 0, editingStart: false, startInput: "0",
+    expanded: {}
+  };
+
+  renderVals() {
+    let running = this.state.startingBalance;
+    const periodsWithBalance = BASE_PERIODS.map((p) => {
+      const net = p.income - p.expenses;
+      running += net;
+      return { ...p, net, balance: running };
+    });
+    const currentBalance = running;
+
+    const allVals = periodsWithBalance.map((p) => p.balance).concat([this.state.startingBalance]);
+    const minV = Math.min(...allVals, 0), maxV = Math.max(...allVals, 1);
+    const range = maxV - minV || 1;
+    const yFor = (v) => 132 - ((v - minV) / range) * 124;
+    const n = periodsWithBalance.length;
+    const xFor = (i) => (i / (n - 1)) * 300;
+    const balancePoints = periodsWithBalance.map((p, i) => ({ x: xFor(i), y: yFor(p.balance) }));
+    const balancePath = balancePoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+
+    const maxIE = Math.max(...periodsWithBalance.map((p) => Math.max(p.income, p.expenses)), 1);
+    const bw = 22, groupW = 300 / n;
+    const ieBars = periodsWithBalance.map((p, i) => {
+      const incomeH = (p.income / maxIE) * 105, expenseH = (p.expenses / maxIE) * 105;
+      const cx = i * groupW + groupW / 2;
+      return { w: bw, incomeX: cx - bw - 2, incomeY: 112 - incomeH, incomeH, expenseX: cx + 2, expenseY: 112 - expenseH, expenseH };
+    });
+
+    const periods = periodsWithBalance.map((p, i) => ({
+      label: p.label,
+      incomeFmt: fmt(p.income), expensesFmt: fmt(p.expenses),
+      netFmt: fmt(p.net), netColor: p.net < 0 ? "#b3423a" : "#2d6a4f",
+      balanceFmt: fmt(p.balance), balanceColor: p.balance < 0 ? "#b3423a" : "#141715",
+      shortLabel: p.shortLabel,
+      bg: i % 2 === 0 ? "#f6f7f5" : "#fff",
+      expanded: !!this.state.expanded[i],
+      toggle: () => this.setState((s) => ({ expanded: { ...s.expanded, [i]: !s.expanded[i] } }))
+    }));
+
+    return {
+      startingBalanceFmt: fmt(this.state.startingBalance),
+      currentBalanceFmt: fmt(currentBalance), currentBalanceColor: currentBalance < 0 ? "#b3423a" : "#141715",
+      editingStart: this.state.editingStart, notEditingStart: !this.state.editingStart,
+      startInput: this.state.startInput,
+      startEditing: () => this.setState({ editingStart: true, startInput: String(this.state.startingBalance) }),
+      setStartInput: (ev) => this.setState({ startInput: ev.target.value }),
+      commitStart: () => {
+        const v = parseFloat(this.state.startInput);
+        this.setState({ startingBalance: isNaN(v) ? this.state.startingBalance : v, editingStart: false });
+      },
+      balancePath, balancePoints,
+      ieBars, periods
+    };
+  }
+}
+
+</script>
+
+
+</body></html>"
+  

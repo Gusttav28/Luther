@@ -6,6 +6,7 @@ import { BarChart } from "@/components/charts/bar-chart";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { convertMinor, MissingRateError, formatMinor } from "@/lib/money";
 import { AddSavingsForm, SavingsListRow } from "./savings-forms";
+import { MobileSavings } from "@/components/savings/mobile-savings";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,12 @@ export default async function SavingsPage() {
   for (const row of data.contributions) {
     let converted: number;
     try {
-      converted = convertMinor(row.amountMinor, row.currency, settings.reportingCurrency, settings.rates);
+      converted = convertMinor(
+        row.amountMinor,
+        row.currency,
+        settings.reportingCurrency,
+        settings.rates
+      );
     } catch (error) {
       if (error instanceof MissingRateError) {
         conversionUnavailable = true;
@@ -54,89 +60,127 @@ export default async function SavingsPage() {
   }
 
   const defaultDate = now.toISOString().slice(0, 10);
+  const activityCenterLabel = conversionUnavailable
+    ? "Unavailable"
+    : formatMinor(contributionsTotal + withdrawalsTotal, settings.reportingCurrency);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className="page-title">Lifetime savings</h1>
-        <RatesNote usdToCrc={settings.rates.usdToCrc} />
+    <div className="mx-auto max-w-7xl">
+      <MobileSavings
+        currency={settings.reportingCurrency}
+        balanceMinor={data.balanceMinor}
+        leftoverMinor={data.leftoverMinor}
+        lifetimeTakeMinor={data.lifetimeTakeMinor}
+        postLifetimeMinor={data.postLifetimeMinor}
+        savingsTrend={savingsTrend}
+        contributionsTotal={contributionsTotal}
+        withdrawalsTotal={withdrawalsTotal}
+        conversionUnavailable={conversionUnavailable}
+        activityCenterLabel={activityCenterLabel}
+        contributions={data.contributions}
+        defaultDate={defaultDate}
+      />
+
+      <div className="hidden space-y-6 md:block">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="page-title">Lifetime savings</h1>
+          <RatesNote usdToCrc={settings.rates.usdToCrc} />
+        </div>
+
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Savings summary">
+          <div className="card">
+            <p className="field-label">Lifetime balance</p>
+            <p className="text-2xl font-bold tabular-nums text-ink">
+              <Money minor={data.balanceMinor} currency={settings.reportingCurrency} />
+            </p>
+          </div>
+          <div className="card">
+            <p className="field-label">Budget left after expenses</p>
+            <p className="text-2xl font-bold tabular-nums text-ink">
+              <Money minor={data.leftoverMinor} currency={settings.reportingCurrency} />
+            </p>
+          </div>
+          <div className="card">
+            <p className="field-label">Lifetime take (70%)</p>
+            <p className="text-2xl font-bold tabular-nums text-ink">
+              <Money minor={data.lifetimeTakeMinor} currency={settings.reportingCurrency} />
+            </p>
+          </div>
+          <div className="card">
+            <p className="field-label">Left for projects (30%)</p>
+            <p className="text-2xl font-bold tabular-nums text-ink">
+              <Money minor={data.postLifetimeMinor} currency={settings.reportingCurrency} />
+            </p>
+          </div>
+        </section>
+
+        <p className="text-sm text-ink-muted">
+          Lifetime savings are always <strong className="font-semibold text-ink">70%</strong> of
+          what remains after expenses from your planned income. Use the form below only for manual
+          adjustments or withdrawals.
+        </p>
+
+        <section className="grid min-w-0 gap-4 md:grid-cols-2" aria-label="Savings analytics">
+          <BarChart
+            title="Savings contributions over time"
+            subtitle="Positive contributions and withdrawals by month."
+            data={savingsTrend}
+            series={[
+              { key: "contributions", name: "Contributions", color: "#3d9b6a" },
+              { key: "withdrawals", name: "Withdrawals", color: "#737373" },
+            ]}
+            currency={settings.reportingCurrency}
+            emptyMessage={
+              conversionUnavailable
+                ? "Unavailable until rates are set."
+                : "No savings activity yet."
+            }
+          />
+          <DonutChart
+            title="Contributions versus withdrawals"
+            subtitle="Signed savings rows grouped by direction; notes are not categories."
+            segments={[
+              {
+                key: "contributions",
+                name: "Contributions",
+                value: contributionsTotal,
+                color: "#3d9b6a",
+              },
+              {
+                key: "withdrawals",
+                name: "Withdrawals",
+                value: withdrawalsTotal,
+                color: "#737373",
+              },
+            ]}
+            currency={settings.reportingCurrency}
+            centerLabel={activityCenterLabel}
+            centerSubLabel="Activity"
+            emptyMessage={
+              conversionUnavailable
+                ? "Unavailable until rates are set."
+                : "No savings activity yet."
+            }
+          />
+        </section>
+
+        <section aria-label="Record savings">
+          <AddSavingsForm defaultDate={defaultDate} />
+        </section>
+
+        <section className="card">
+          <h2 className="text-base font-semibold">History</h2>
+          {data.contributions.length === 0 ? (
+            <p className="py-3 text-sm text-ink-faint">No contributions yet.</p>
+          ) : (
+            <ul className="divide-y divide-stone-100 dark:divide-neutral-800">
+              {data.contributions.map((row) => (
+                <SavingsListRow key={row.id} row={row} />
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Savings summary">
-        <div className="card">
-          <p className="field-label">Lifetime balance</p>
-          <p className="text-2xl font-bold tabular-nums text-ink">
-            <Money minor={data.balanceMinor} currency={settings.reportingCurrency} />
-          </p>
-        </div>
-        <div className="card">
-          <p className="field-label">Budget left after expenses</p>
-          <p className="text-2xl font-bold tabular-nums text-ink">
-            <Money minor={data.leftoverMinor} currency={settings.reportingCurrency} />
-          </p>
-        </div>
-        <div className="card">
-          <p className="field-label">Lifetime take (70%)</p>
-          <p className="text-2xl font-bold tabular-nums text-ink">
-            <Money minor={data.lifetimeTakeMinor} currency={settings.reportingCurrency} />
-          </p>
-        </div>
-        <div className="card">
-          <p className="field-label">Left for projects (30%)</p>
-          <p className="text-2xl font-bold tabular-nums text-ink">
-            <Money minor={data.postLifetimeMinor} currency={settings.reportingCurrency} />
-          </p>
-        </div>
-      </section>
-
-      <p className="text-sm text-ink-muted">
-        Lifetime savings are always <strong className="font-semibold text-ink">70%</strong> of what
-        remains after expenses from your planned income. Use the form below only for manual
-        adjustments or withdrawals.
-      </p>
-
-      <section className="grid min-w-0 gap-4 md:grid-cols-2" aria-label="Savings analytics">
-        <BarChart
-          title="Savings contributions over time"
-          subtitle="Positive contributions and withdrawals by month."
-          data={savingsTrend}
-          series={[
-            { key: "contributions", name: "Contributions", color: "#3d9b6a" },
-            { key: "withdrawals", name: "Withdrawals", color: "#737373" },
-          ]}
-          currency={settings.reportingCurrency}
-          emptyMessage={conversionUnavailable ? "Unavailable until rates are set." : "No savings activity yet."}
-        />
-        <DonutChart
-          title="Contributions versus withdrawals"
-          subtitle="Signed savings rows grouped by direction; notes are not categories."
-          segments={[
-            { key: "contributions", name: "Contributions", value: contributionsTotal, color: "#3d9b6a" },
-            { key: "withdrawals", name: "Withdrawals", value: withdrawalsTotal, color: "#737373" },
-          ]}
-          currency={settings.reportingCurrency}
-          centerLabel={conversionUnavailable ? "Unavailable" : formatMinor(contributionsTotal + withdrawalsTotal, settings.reportingCurrency)}
-          centerSubLabel="Activity"
-          emptyMessage={conversionUnavailable ? "Unavailable until rates are set." : "No savings activity yet."}
-        />
-      </section>
-
-      <section aria-label="Record savings">
-        <AddSavingsForm defaultDate={defaultDate} />
-      </section>
-
-      <section className="card">
-        <h2 className="text-base font-semibold">History</h2>
-        {data.contributions.length === 0 ? (
-          <p className="py-3 text-sm text-ink-faint">No contributions yet.</p>
-        ) : (
-          <ul className="divide-y divide-stone-100">
-            {data.contributions.map((row) => (
-              <SavingsListRow key={row.id} row={row} />
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

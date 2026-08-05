@@ -9,26 +9,54 @@ import type { SavingsRow } from "@/lib/queries/savings";
 
 const CURRENCY_OPTIONS: Currency[] = ["CRC", "USD"];
 
-export function AddSavingsForm({ defaultDate }: { defaultDate: string }) {
+export function AddSavingsForm({
+  defaultDate,
+  variant = "card",
+  onSuccess,
+}: {
+  defaultDate: string;
+  variant?: "card" | "sheet";
+  onSuccess?: () => void;
+}) {
   const [state, formAction] = useActionState(createSavingsAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
+  const sheet = variant === "sheet";
+  const idPrefix = sheet ? "sheet-savings" : "savings";
+
   useEffect(() => {
-    if (state.ok) formRef.current?.reset();
-  }, [state]);
+    if (state.ok) {
+      formRef.current?.reset();
+      onSuccess?.();
+    }
+  }, [state, onSuccess]);
+
   return (
-    <form ref={formRef} action={formAction} className="card space-y-3">
-      <h2 className="text-base font-semibold">Manual adjustment</h2>
-      <p className="text-sm text-ink-muted">
-        Lifetime savings of 70% are calculated automatically. Use this form only for corrections
-        or withdrawals (negative amount, e.g. -50).
-      </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div>
-          <label htmlFor="savings-date" className="field-label">
+    <form
+      ref={formRef}
+      action={formAction}
+      className={sheet ? "space-y-4" : "card space-y-3"}
+    >
+      {sheet ? (
+        <p className="text-sm text-ink-muted">
+          Lifetime savings of 70% are calculated automatically. Use this only for corrections or
+          withdrawals (negative amount, e.g. -50).
+        </p>
+      ) : (
+        <>
+          <h2 className="text-base font-semibold">Manual adjustment</h2>
+          <p className="text-sm text-ink-muted">
+            Lifetime savings of 70% are calculated automatically. Use this form only for corrections
+            or withdrawals (negative amount, e.g. -50).
+          </p>
+        </>
+      )}
+      <div className={`grid grid-cols-2 gap-3 ${sheet ? "" : "sm:grid-cols-4"}`}>
+        <div className={sheet ? "col-span-2" : ""}>
+          <label htmlFor={`${idPrefix}-date`} className="field-label">
             Date
           </label>
           <input
-            id="savings-date"
+            id={`${idPrefix}-date`}
             name="date"
             type="date"
             defaultValue={defaultDate}
@@ -36,12 +64,12 @@ export function AddSavingsForm({ defaultDate }: { defaultDate: string }) {
           />
           {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
         </div>
-        <div>
-          <label htmlFor="savings-amount" className="field-label">
+        <div className={sheet ? "col-span-2" : ""}>
+          <label htmlFor={`${idPrefix}-amount`} className="field-label">
             Amount
           </label>
           <input
-            id="savings-amount"
+            id={`${idPrefix}-amount`}
             name="amount"
             inputMode="decimal"
             placeholder="0.00"
@@ -49,11 +77,16 @@ export function AddSavingsForm({ defaultDate }: { defaultDate: string }) {
           />
           {state.errors?.amount && <p className="error-text">{state.errors.amount}</p>}
         </div>
-        <div>
-          <label htmlFor="savings-currency" className="field-label">
+        <div className={sheet ? "col-span-2" : ""}>
+          <label htmlFor={`${idPrefix}-currency`} className="field-label">
             Currency
           </label>
-          <select id="savings-currency" name="currency" className="field-input" defaultValue="CRC">
+          <select
+            id={`${idPrefix}-currency`}
+            name="currency"
+            className="field-input"
+            defaultValue="CRC"
+          >
             {CURRENCY_OPTIONS.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -61,15 +94,23 @@ export function AddSavingsForm({ defaultDate }: { defaultDate: string }) {
             ))}
           </select>
         </div>
-        <div>
-          <label htmlFor="savings-note" className="field-label">
+        <div className={sheet ? "col-span-2" : ""}>
+          <label htmlFor={`${idPrefix}-note`} className="field-label">
             Note (optional)
           </label>
-          <input id="savings-note" name="note" className="field-input" />
+          <input id={`${idPrefix}-note`} name="note" className="field-input" />
         </div>
       </div>
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
-      <PendingSubmitButton idle="Record" className="btn-primary min-w-[5.5rem]" pendingLabel="Recording" />
+      <PendingSubmitButton
+        idle="Record"
+        className={
+          sheet
+            ? "btn-primary w-full !rounded-xl !bg-neutral-900 py-3 text-base font-semibold dark:!bg-neutral-100 dark:!text-neutral-900"
+            : "btn-primary min-w-[5.5rem]"
+        }
+        pendingLabel="Recording"
+      />
     </form>
   );
 }
@@ -127,25 +168,36 @@ export function SavingsListRow({ row }: { row: SavingsRow }) {
     );
   }
   const isWithdrawal = row.amountMinor < 0;
+  const title =
+    row.note ||
+    (isWithdrawal
+      ? "Withdrawal"
+      : "Lifetime savings (70% of leftover after expenses)");
   return (
-    <li className="flex items-center justify-between gap-3 py-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">
-          {row.note || (isWithdrawal ? "Withdrawal" : "Contribution")}
-        </p>
-        <p className="text-xs text-stone-500">
-          {row.date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-ink">{title}</p>
+        <p className="text-xs text-ink-muted">
+          {row.date.toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
         </p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         <span
           className={`text-sm font-semibold tabular-nums ${
-            isWithdrawal ? "text-red-600 dark:text-red-400" : "text-brand-accent"
+            isWithdrawal ? "text-red-600 dark:text-red-400" : "text-ink"
           }`}
         >
           {formatMinor(row.amountMinor, row.currency)}
         </span>
-        <button onClick={() => setEditing(true)} className="btn-secondary px-2 py-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="btn-secondary px-2 py-1 text-xs"
+        >
           Edit
         </button>
         <form action={deleteSavingsAction}>

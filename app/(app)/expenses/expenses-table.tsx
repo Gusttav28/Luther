@@ -11,6 +11,12 @@ export type HalfFilter = "ALL" | "H1" | "H2";
 const HALF_OPTIONS: { key: HalfFilter; label: string }[] = [
   { key: "ALL", label: "All" },
   { key: "H1", label: "1–15" },
+  { key: "H2", label: "16+" },
+];
+
+const HALF_OPTIONS_DESKTOP: { key: HalfFilter; label: string }[] = [
+  { key: "ALL", label: "All" },
+  { key: "H1", label: "1–15" },
   { key: "H2", label: "16–end" },
 ];
 
@@ -63,8 +69,9 @@ export function ExpensesTable({
 
   return (
     <div className="space-y-3">
+      {/* Desktop category chips */}
       <div
-        className="flex flex-wrap items-center gap-2"
+        className="hidden flex-wrap items-center gap-2 md:flex"
         role="group"
         aria-label="Filter by category"
       >
@@ -91,18 +98,61 @@ export function ExpensesTable({
         ))}
       </div>
 
-      <div className="card relative overflow-hidden">
+      <div className="card relative overflow-hidden md:!rounded-[20px]">
+        {/* Mobile filters */}
+        <div className="mb-3 flex items-center gap-2 md:hidden">
+          <label className="sr-only" htmlFor="expense-category-filter">
+            Category
+          </label>
+          <select
+            id="expense-category-filter"
+            disabled={pending}
+            value={categoryId ?? ""}
+            onChange={(e) => navigate(e.target.value || undefined, period)}
+            className="field-input min-w-0 flex-1 !py-2 text-sm"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <div
+            className="inline-flex shrink-0 rounded-[10px] bg-surface-muted p-0.5"
+            role="group"
+            aria-label="Filter by half of month"
+          >
+            {HALF_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                disabled={pending}
+                onClick={() => navigate(categoryId, opt.key)}
+                aria-pressed={period === opt.key}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-70 ${
+                  period === opt.key
+                    ? "bg-surface-card text-ink shadow-sm"
+                    : "text-ink-muted"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold">
+          <h2 className="text-base font-semibold text-ink">
             {expenseCount} expense{expenseCount === 1 ? "" : "s"}
           </h2>
           <div className="flex flex-wrap items-center gap-3">
             <div
-              className="inline-flex rounded-card border border-stone-200 p-0.5 dark:border-neutral-700"
+              className="hidden rounded-card border border-stone-200 p-0.5 md:inline-flex dark:border-neutral-700"
               role="group"
               aria-label="Filter by half of month"
             >
-              {HALF_OPTIONS.map((opt) => (
+              {HALF_OPTIONS_DESKTOP.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
@@ -119,7 +169,7 @@ export function ExpensesTable({
                 </button>
               ))}
             </div>
-            <p className="text-lg font-bold tabular-nums">
+            <p className="text-lg font-bold tabular-nums text-ink">
               <Money minor={displayTotal} currency={reportingCurrency} />
             </p>
           </div>

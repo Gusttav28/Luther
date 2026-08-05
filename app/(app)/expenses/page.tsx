@@ -7,6 +7,7 @@ import { AddExpenseForm, ExpenseListRow } from "./expense-forms";
 import { ExpensesTable, type HalfFilter } from "./expenses-table";
 import { ExportPlanButton } from "./export-plan-button";
 import { ExpensesMonthFrame } from "./expenses-month-frame";
+import { RegisterAddExpenseForm } from "@/components/add-expense-sheet";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,13 @@ function expenseInHalf(date: Date, half: HalfFilter): boolean {
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string; category?: string; period?: string }>;
+  searchParams: Promise<{
+    year?: string;
+    month?: string;
+    category?: string;
+    period?: string;
+    add?: string;
+  }>;
 }) {
   const userId = await requireUserId();
   const params = await searchParams;
@@ -36,6 +43,7 @@ export default async function ExpensesPage({
   const month = Number(params.month) || now.getMonth() + 1;
   const categoryId = params.category || undefined;
   const period = parsePeriod(params.period);
+  const openFromQuery = params.add === "1";
 
   const [settings, categories, allCategories] = await Promise.all([
     getSettings(userId),
@@ -84,8 +92,49 @@ export default async function ExpensesPage({
     color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
   }));
 
+  const list = (
+    <ExpensesTable
+      year={year}
+      month={month}
+      categoryId={categoryId}
+      categories={categories}
+      period={period}
+      expenseCount={filteredExpenses.length}
+      displayTotal={displayTotal}
+      reportingCurrency={settings.reportingCurrency}
+      usdToCrc={settings.rates.usdToCrc}
+    >
+      {filteredExpenses.length === 0 ? (
+        <p className="py-3 text-sm text-ink-faint">
+          {period === "ALL"
+            ? "No expenses this month."
+            : period === "H1"
+              ? "No expenses in the first half (1–15)."
+              : "No expenses in the second half (16–end)."}
+        </p>
+      ) : (
+        <ul className="divide-y divide-stone-100 dark:divide-neutral-800">
+          {filteredExpenses.map((expense) => (
+            <ExpenseListRow
+              key={expense.id}
+              expense={expense}
+              categories={categoryOptions}
+              reportingCurrency={settings.reportingCurrency}
+            />
+          ))}
+        </ul>
+      )}
+    </ExpensesTable>
+  );
+
   return (
     <div className="mx-auto max-w-5xl">
+      <RegisterAddExpenseForm
+        categories={categoryOptions}
+        defaultDate={defaultDate}
+        openFromQuery={openFromQuery}
+      />
+
       <ExpensesMonthFrame
         year={year}
         month={month}
@@ -93,10 +142,11 @@ export default async function ExpensesPage({
           ...(categoryId ? { category: categoryId } : {}),
           ...(period !== "ALL" ? { period } : {}),
         }}
-        title={<h1 className="page-title">Expenses</h1>}
+        title={<h1 className="page-title md:text-2xl">Expenses</h1>}
         actions={<ExportPlanButton year={year} month={month} />}
       >
-        <div className="grid gap-4 lg:grid-cols-2">
+        {/* Desktop: inline add + donut */}
+        <div className="hidden gap-4 md:grid lg:grid-cols-2">
           <AddExpenseForm categories={categoryOptions} defaultDate={defaultDate} />
           <DonutChart
             title="Composition"
@@ -113,38 +163,7 @@ export default async function ExpensesPage({
           />
         </div>
 
-        <ExpensesTable
-          year={year}
-          month={month}
-          categoryId={categoryId}
-          categories={categories}
-          period={period}
-          expenseCount={filteredExpenses.length}
-          displayTotal={displayTotal}
-          reportingCurrency={settings.reportingCurrency}
-          usdToCrc={settings.rates.usdToCrc}
-        >
-          {filteredExpenses.length === 0 ? (
-            <p className="py-3 text-sm text-ink-faint">
-              {period === "ALL"
-                ? "No expenses this month."
-                : period === "H1"
-                  ? "No expenses in the first half (1–15)."
-                  : "No expenses in the second half (16–end)."}
-            </p>
-          ) : (
-            <ul className="divide-y divide-stone-100 dark:divide-neutral-800">
-              {filteredExpenses.map((expense) => (
-                <ExpenseListRow
-                  key={expense.id}
-                  expense={expense}
-                  categories={categoryOptions}
-                  reportingCurrency={settings.reportingCurrency}
-                />
-              ))}
-            </ul>
-          )}
-        </ExpensesTable>
+        {list}
       </ExpensesMonthFrame>
     </div>
   );

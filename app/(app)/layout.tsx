@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LutherLogo } from "@/components/logo";
 import { LogOut } from "@/components/icons";
 import { AppCacheProvider } from "@/components/app-cache-provider";
+import { AddExpenseSheetProvider } from "@/components/add-expense-sheet";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -72,11 +73,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </form>
       </header>
 
-      <main className="w-full min-w-0 flex-1 overflow-x-hidden px-4 py-6 pb-24 md:h-dvh md:overflow-y-auto md:px-8 md:pb-8 lg:px-10">
-        <AppCacheProvider>{children}</AppCacheProvider>
-      </main>
+      <AddExpenseSheetProvider>
+        <main className="w-full min-w-0 flex-1 overflow-x-hidden px-4 py-6 pb-28 md:h-dvh md:overflow-y-auto md:px-8 md:pb-8 lg:px-10">
+          <AppCacheProvider>{children}</AppCacheProvider>
+        </main>
 
-      <BottomNav />
+        <BottomNav />
+      </AddExpenseSheetProvider>
     </div>
   );
 }

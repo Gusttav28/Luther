@@ -25,22 +25,32 @@ function hasSeries(points: CashflowPoint[]): boolean {
 export function CashflowChart({
   points,
   currency,
+  compact = false,
 }: {
   points: CashflowPoint[];
   currency: Currency;
+  compact?: boolean;
 }) {
   const empty = !hasSeries(points);
 
   return (
-    <section className="card h-full min-h-[280px]">
+    <section
+      className={`card h-full ${compact ? "!rounded-[20px] min-h-0" : "min-h-[280px]"}`}
+    >
       <h2 className="section-title mb-1">Cashflow</h2>
       <p className="mb-4 text-xs text-ink-muted">Cumulative earned vs spent this month</p>
       {empty ? (
-        <div className="flex h-48 items-center justify-center rounded-lg surface-muted text-sm text-ink-faint">
+        <div
+          className={`flex items-center justify-center rounded-lg surface-muted text-sm text-ink-faint ${
+            compact ? "h-36" : "h-48"
+          }`}
+        >
           No cashflow data for this month yet.
         </div>
       ) : (
-        <div className="h-56 w-full min-w-0 overflow-hidden">
+        <div
+          className={`w-full min-w-0 overflow-hidden ${compact ? "h-44" : "h-56"}`}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />

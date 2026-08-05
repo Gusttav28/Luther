@@ -1,0 +1,305 @@
+ sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      Sign out
+    </a>
+  </div>
+
+  <div style="padding:6px 22px 20px">
+    <h1 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:28px;letter-spacing:-0.01em;color:#141715">Overview</h1>
+    <p style="margin:6px 0 20px;font-size:13.5px;color:#7a8a80">{{ monthLabel }} Â· Finance analytics</p>
+
+    <div style="display:flex;align-items:center;gap:8px">
+      <button sc-camel-on-click="{{ prevMonth }}" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(20,30,25,.12);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#171a18" style-hover="border-color:rgba(20,30,25,.28)">
+        <svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div style="flex:1;text-align:center;font-weight:600;font-size:15px;color:#141715">{{ monthLabel }}</div>
+      <button sc-camel-on-click="{{ nextMonth }}" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(20,30,25,.12);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#171a18" style-hover="border-color:rgba(20,30,25,.28)">
+        <svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+      <button sc-camel-on-click="{{ refresh }}" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(20,30,25,.12);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#171a18">
+        <svg width="14" height="14" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="{{ refreshSpinStyle }}"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px 20px 6px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:20px;column-gap:16px">
+        <sc-for list="{{ statCards }}" as="st" hint-placeholder-count="4">
+          <div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:#8a988f;text-transform:uppercase">{{ st.label }}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;color:#141715;margin-top:4px">{{ st.value }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:5px;font-size:12px;font-weight:500;color:{{ st.deltaColor }}">
+              <svg width="10" height="10" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="{{ st.arrowStyle }}"><polyline points="19 12 12 19 5 12"></polyline><line x1="12" y1="19" x2="12" y2="5"></line></svg>
+              {{ st.delta }} MoM
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(20,30,25,.07);display:flex;align-items:center;justify-content:space-between;padding-bottom:14px">
+        <span style="font-size:12.5px;color:#8a988f">Lifetime balance</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;color:#141715">{{ lifetimeBalance }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Cashflow</h3>
+      <p style="margin:4px 0 16px;font-size:12.5px;color:#8a988f">Cumulative earned vs spent this month</p>
+      <svg sc-camel-view-box="0 0 300 130" width="100%" height="130" style="overflow:visible">
+        <line x1="0" y1="10" x2="300" y2="10" stroke="rgba(20,30,25,.08)" stroke-dasharray="2 4"></line>
+        <line x1="0" y1="65" x2="300" y2="65" stroke="rgba(20,30,25,.08)" stroke-dasharray="2 4"></line>
+        <line x1="0" y1="120" x2="300" y2="120" stroke="rgba(20,30,25,.08)"></line>
+        <path d="{{ chart.spentPath }}" fill="none" stroke="#b7c2bb" stroke-width="2" stroke-dasharray="4 4"></path>
+        <path d="{{ chart.netPath }}" fill="none" stroke="{{ accent }}" stroke-width="2.5"></path>
+        <circle cx="{{ chart.netStart.x }}" cy="{{ chart.netStart.y }}" r="3.5" fill="{{ accent }}"></circle>
+        <circle cx="{{ chart.netEnd.x }}" cy="{{ chart.netEnd.y }}" r="3.5" fill="{{ accent }}"></circle>
+      </svg>
+      <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:#7a8a80">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:{{ accent }};display:inline-block"></span>Net</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:#b7c2bb;display:inline-block"></span>Spent</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div>
+          <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Breakdown</h3>
+          <p style="margin:4px 0 0;font-size:12.5px;color:#8a988f">By category or composition</p>
+        </div>
+        <div style="display:flex;background:#f0f1ee;border-radius:10px;padding:3px;flex:none">
+          <button sc-camel-on-click="{{ setViewCategory }}" style="border:none;background:{{ tabBg.category }};color:{{ tabColor.category }};font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;cursor:pointer">Category</button>
+          <button sc-camel-on-click="{{ setViewComposition }}" style="border:none;background:{{ tabBg.composition }};color:{{ tabColor.composition }};font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;cursor:pointer">Composition</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ isCategoryView }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:18px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font-size:12.5px;color:#8a988f">Total spent</span>
+            <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:#141715">{{ totalSpent }}</span>
+          </div>
+          <div style="height:8px;border-radius:5px;background:#eef0ec;margin-top:10px;overflow:hidden;display:flex">
+            <sc-for list="{{ categories }}" as="cat" hint-placeholder-count="1">
+              <div style="height:100%;background:{{ cat.color }};width:{{ cat.pct }}%"></div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+            <sc-for list="{{ categories }}" as="cat" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+                <span style="width:8px;height:8px;border-radius:50%;background:{{ cat.color }};flex:none"></span>
+                <span style="flex:1;color:#3a4640">{{ cat.name }}</span>
+                <span style="font-weight:600;color:#141715">{{ cat.amount }}</span>
+                <span style="color:#8a988f;width:36px;text-align:right">{{ cat.pct }}%</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCompositionView }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;display:flex;flex-direction:column;align-items:center">
+          <svg width="180" height="180" sc-camel-view-box="0 0 180 180">
+            <circle cx="90" cy="90" r="70" fill="none" stroke="#eef0ec" stroke-width="20"></circle>
+            <circle cx="90" cy="90" r="70" fill="none" stroke="{{ accent }}" stroke-width="20" stroke-dasharray="{{ donut.dash }}" stroke-dashoffset="{{ donut.offset }}" transform="rotate(-90 90 90)" stroke-linecap="round"></circle>
+            <text x="90" y="85" text-anchor="middle" font-size="11" font-weight="600" fill="#8a988f" letter-spacing="0.5">EARNED</text>
+            <text x="90" y="106" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="19" font-weight="700" fill="#141715">{{ earnedShort }}</text>
+          </svg>
+          <div style="display:flex;flex-direction:column;gap:8px;width:100%;margin-top:12px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ accent }};flex:none"></span>
+              <span style="flex:1;color:#3a4640">Earned</span>
+              <span style="color:#8a988f">{{ compositionPct.earned }}%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#eef0ec;flex:none;border:1px solid #d7dcd4"></span>
+              <span style="flex:1;color:#3a4640">Spent</span>
+              <span style="color:#8a988f">{{ compositionPct.spent }}%</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 18px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Half-month schedule</h3>
+      <p style="margin:4px 0 14px;font-size:12.5px;color:#8a988f">Earned, spent, and saved by period</p>
+      <div style="display:flex;gap:10px">
+        <sc-for list="{{ halves }}" as="h" hint-placeholder-count="2">
+          <div style="flex:1;background:{{ h.bg }};border-radius:14px;padding:14px">
+            <div style="display:flex;align-items:baseline;gap:6px">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:#141715">{{ h.name }}</span>
+              <sc-if value="{{ h.current }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;color:{{ accent }};background:#fff;padding:2px 6px;border-radius:6px">Current</span></sc-if>
+            </div>
+            <div style="font-size:11px;color:#8a988f;margin-top:2px">{{ h.range }}</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#8a988f">Earned</span><span style="font-weight:600;color:#141715">{{ h.earned }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#8a988f">Spent</span><span style="font-weight:600;color:#141715">{{ h.spent }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#8a988f">Saved</span><span style="font-weight:600;color:#141715">{{ h.saved }}</span></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 22px 100px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(20,30,25,.06);padding:20px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <div>
+          <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:#141715">Projects funded</h3>
+          <p style="margin:4px 0 0;font-size:12.5px;color:#8a988f">Active purchase goals</p>
+        </div>
+        <a href="#" style="font-size:12.5px;font-weight:600">View all</a>
+      </div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ projects }}" as="p" hint-placeholder-count="1">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:#3a4640;font-weight:500">{{ p.name }}</span><span style="font-weight:600;color:#141715">{{ p.pct }}%</span></div>
+            <div style="height:6px;border-radius:4px;background:#eef0ec;overflow:hidden"><div style="height:100%;background:{{ accent }};width:{{ p.pct }}%"></div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center">
+    <div style="background:#171a18;border-radius:24px;padding:6px;display:flex;align-items:center;gap:2px;box-shadow:0 10px 24px rgba(0,0,0,.25)">
+      <button sc-camel-on-click="{{ setNav('overview') }}" style="display:flex;align-items:center;gap:6px;border:none;cursor:pointer;padding:10px 14px;border-radius:18px;background:{{ navBg.overview }};color:#fff;font-size:13px;font-weight:600">
+        <svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+        Overview
+      </button>
+      <button sc-camel-on-click="{{ setNav('import') }}" style="border:none;cursor:pointer;padding:10px;border-radius:18px;background:{{ navBg.import }};color:#c7cfc9;display:flex">
+        <svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+      </button>
+      <button sc-camel-on-click="{{ setNav('export') }}" style="border:none;cursor:pointer;padding:10px;border-radius:18px;background:{{ navBg.export }};color:#c7cfc9;display:flex">
+        <svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
+      </button>
+      <button sc-camel-on-click="{{ setNav('more') }}" style="border:none;cursor:pointer;padding:10px;border-radius:18px;background:{{ navBg.more }};color:#c7cfc9;display:flex">
+        <svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+      </button>
+      <div style="width:32px;height:32px;border-radius:50%;background:{{ accent }};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;margin-left:2px">N</div>
+    </div>
+  </div>
+
+  <sc-if value="{{ toastMsg }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;bottom:76px;transform:translateX(-50%);background:#141715;color:#fff;font-size:12px;font-weight:500;padding:8px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.2)">{{ toastMsg }}</div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2d6a4f&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#2d6a4f&quot;,&quot;#1f5c3f&quot;,&quot;#3a5a40&quot;,&quot;#52796f&quot;]},&quot;breakdownDefaultView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;category&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;category&quot;,&quot;composition&quot;],&quot;section&quot;:&quot;Behavior&quot;}}">
+const MONTHS = [
+  { label: "August 2026", earned: 0, spent: 5000, saved: 0, lifetime: 163761.5,
+    dEarned: -100, dSpent: -98, dSaved: -100, dRemaining: -107,
+    categories: [{ name: "Subscription", amount: 5000, pct: 100 }] },
+  { label: "July 2026", earned: 4200, spent: 3100, saved: 1100, lifetime: 158761.5,
+    dEarned: 6, dSpent: -12, dSaved: 34, dRemaining: 41,
+    categories: [{ name: "Rent", amount: 1600, pct: 52 }, { name: "Food", amount: 900, pct: 29 }, { name: "Subscription", amount: 600, pct: 19 }] },
+  { label: "June 2026", earned: 3950, spent: 3520, saved: 430, lifetime: 154561.5,
+    dEarned: -3, dSpent: 8, dSaved: -22, dRemaining: -18,
+    categories: [{ name: "Rent", amount: 1600, pct: 45 }, { name: "Food", amount: 1120, pct: 32 }, { name: "Transport", amount: 800, pct: 23 }] },
+  { label: "May 2026", earned: 4080, spent: 3260, saved: 820, lifetime: 154131.5,
+    dEarned: 2, dSpent: -5, dSaved: 15, dRemaining: 12,
+    categories: [{ name: "Rent", amount: 1600, pct: 49 }, { name: "Food", amount: 980, pct: 30 }, { name: "Transport", amount: 680, pct: 21 }] }
+];
+const PALETTE = ["#2d6a4f", "#84a98c", "#cad2c5", "#52796f"];
+const CEDI = "\u00A2";
+
+function fmt(n) {
+  const neg = n < 0;
+  const v = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (neg ? "-" : "") + CEDI + v;
+}
+
+class Component extends DCLogic {
+  state = { monthIndex: 0, view: this.props.breakdownDefaultView === "composition" ? "composition" : "category", nav: "overview", refreshing: false, toast: "" };
+
+  showToast(msg) {
+    clearTimeout(this._t);
+    this.setState({ toast: msg });
+    this._t = setTimeout(() => this.setState({ toast: "" }), 1600);
+  }
+
+  renderVals() {
+    const accent = this.props.accentColor || "#2d6a4f";
+    const m = MONTHS[this.state.monthIndex];
+    const remaining = m.earned - m.spent;
+    const deltaColor = (d) => (d >= 0 ? accent : "#b3423a");
+    const arrowStyle = (d) => `transform:rotate(${d >= 0 ? 180 : 0}deg)`;
+
+    const statCards = [
+      { label: "Earned", value: fmt(m.earned), delta: Math.abs(m.dEarned) + "%", deltaColor: deltaColor(m.dEarned), arrowStyle: arrowStyle(m.dEarned) },
+      { label: "Spent", value: fmt(m.spent), delta: Math.abs(m.dSpent) + "%", deltaColor: deltaColor(-m.dSpent), arrowStyle: arrowStyle(m.dSpent) },
+      { label: "Saved", value: fmt(m.saved), delta: Math.abs(m.dSaved) + "%", deltaColor: deltaColor(m.dSaved), arrowStyle: arrowStyle(m.dSaved) },
+      { label: "Remaining", value: fmt(remaining), delta: Math.abs(m.dRemaining) + "%", deltaColor: deltaColor(m.dRemaining), arrowStyle: arrowStyle(m.dRemaining) }
+    ];
+
+    const pts = 6;
+    const spentPts = [], netPts = [];
+    for (let i = 0; i < pts; i++) {
+      const t = i / (pts - 1);
+      const ease = 1 - Math.pow(1 - t, 2);
+      const spentCum = m.spent * ease;
+      const earnedCum = m.earned * t;
+      spentPts.push(spentCum);
+      netPts.push(earnedCum - spentCum);
+    }
+    const allVals = [...spentPts, ...netPts, 0];
+    const maxAbs = Math.max(...allVals.map(Math.abs), 1);
+    const yFor = (v) => 65 - (v / maxAbs) * 55;
+    const xFor = (i) => (i / (pts - 1)) * 300;
+    const pathFrom = (arr) => arr.map((v, i) => `${i === 0 ? "M" : "L"}${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(" ");
+
+    const categories = m.categories.map((c, i) => ({ ...c, amount: fmt(c.amount), color: PALETTE[i % PALETTE.length] }));
+
+    const earnedPct = m.earned + m.spent > 0 ? (m.earned / (m.earned + m.spent)) * 100 : 0;
+    const circumference = 2 * Math.PI * 70;
+    const donut = { dash: `${(circumference * earnedPct / 100).toFixed(1)} ${circumference.toFixed(1)}`, offset: 0 };
+
+    const halves = [
+      { name: "H1", range: "1st â 15th", current: true, bg: "#e9f2ec", earned: fmt(m.earned), spent: fmt(m.spent), saved: fmt(m.saved) },
+      { name: "H2", range: "16th â end", current: false, bg: "#f2f3f0", earned: fmt(0), spent: fmt(0), saved: fmt(0) }
+    ];
+
+    const tabBg = { category: this.state.view === "category" ? "#fff" : "transparent", composition: this.state.view === "composition" ? "#fff" : "transparent" };
+    const tabColor = { category: this.state.view === "category" ? "#141715" : "#8a988f", composition: this.state.view === "composition" ? "#141715" : "#8a988f" };
+    const navBg = { overview: accent, import: "transparent", export: "transparent", more: "transparent" };
+    if (this.state.nav !== "overview") { navBg.overview = "transparent"; navBg[this.state.nav] = "rgba(255,255,255,.12)"; }
+
+    return {
+      accent, monthLabel: m.label,
+      lifetimeBalance: fmt(m.lifetime),
+      statCards, totalSpent: fmt(m.spent), categories, earnedShort: fmt(m.earned),
+      compositionPct: { earned: earnedPct.toFixed(0), spent: (100 - earnedPct).toFixed(0) },
+      donut, halves, tabBg, tabColor,
+      isCategoryView: this.state.view === "category", isCompositionView: this.state.view === "composition",
+      setViewCategory: () => this.setState({ view: "category" }),
+      setViewComposition: () => this.setState({ view: "composition" }),
+      chart: {
+        spentPath: pathFrom(spentPts), netPath: pathFrom(netPts),
+        netStart: { x: xFor(0), y: yFor(netPts[0]) }, netEnd: { x: xFor(pts - 1), y: yFor(netPts[pts - 1]) }
+      },
+      projects: [{ name: "MSI Monitor", pct: 100 }],
+      prevMonth: () => this.setState((s) => ({ monthIndex: Math.min(s.monthIndex + 1, MONTHS.length - 1) })),
+      nextMonth: () => this.setState((s) => ({ monthIndex: Math.max(s.monthIndex - 1, 0) })),
+      refresh: () => { this.setState({ refreshing: true }); setTimeout(() => this.setState({ refreshing: false }), 700); },
+      refreshSpinStyle: this.state.refreshing ? "animation:spin .7s linear infinite;transform-origin:center" : "",
+      navBg,
+      setNav: (id) => () => { this.setState({ nav: id }); if (id !== "overview") this.showToast(id[0].toUpperCase() + id.slice(1) + " â coming soon"); },
+      toastMsg: this.state.toast
+    };
+  }
+}
+
+</script>
+
+
+</body></html>"
+  
