@@ -83,11 +83,19 @@
   }
 
   .field-input {
-    @apply w-full rounded-card border px-3 py-2 text-base shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1 disabled:opacity-50 sm:text-sm;
+    @apply w-full min-w-0 max-w-full rounded-card border px-3 py-2 text-base shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1 disabled:opacity-50 sm:text-sm;
     background-color: var(--luther-input-bg);
     border-color: var(--luther-border-strong);
     color: var(--luther-input-text);
     --tw-ring-offset-color: var(--luther-ring-offset);
+  }
+
+  /* Native date controls often refuse to shrink in CSS grid on mobile Safari. */
+  .field-input[type="date"] {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .field-input::placeholder {
