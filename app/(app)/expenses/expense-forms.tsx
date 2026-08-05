@@ -87,8 +87,8 @@ export function AddExpenseForm({
             </div>
           </div>
 
-          <div className="flex min-w-0 items-end gap-2.5">
-            <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="min-w-0 space-y-3">
+            <div className="min-w-0">
               <label htmlFor={`${idPrefix}-date`} className="field-label">
                 Date
               </label>
@@ -97,23 +97,23 @@ export function AddExpenseForm({
                 name="date"
                 type="date"
                 defaultValue={defaultDate}
-                className="field-input sheet-date-input !px-2 !py-2 !text-sm"
+                className="field-input"
               />
               {state.errors?.date && <p className="error-text">{state.errors.date}</p>}
             </div>
-            <div className="w-[4.75rem] shrink-0">
+            <div className="min-w-0">
               <label htmlFor={`${idPrefix}-currency`} className="field-label">
                 Currency
               </label>
               <select
                 id={`${idPrefix}-currency`}
                 name="currency"
-                className="field-input !px-1.5 !py-2 !text-sm"
+                className="field-input"
                 defaultValue="CRC"
               >
                 {ENTRY_CURRENCIES.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {CURRENCY_LABELS[c]}
                   </option>
                 ))}
               </select>
