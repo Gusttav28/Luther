@@ -361,7 +361,7 @@ export function ExpenseListRow({
                 value={expense.completed ? "false" : "true"}
               />
               <PendingSubmitButton
-                idle={expense.completed ? "Mark pending" : "Mark done"}
+                idle={expense.completed ? "Not complete" : "Complete"}
                 className="w-full justify-start rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surface-muted"
                 pendingLabel="Saving"
               />
@@ -392,8 +392,10 @@ export function ExpenseListRow({
 
   return (
     <li
-      className={`flex items-center justify-between gap-3 py-3 ${
-        expense.completed ? "" : "md:opacity-70"
+      className={`flex items-center justify-between gap-3 rounded-lg py-3 ${
+        expense.completed
+          ? "opacity-60"
+          : "bg-brand-50/70 px-2 dark:bg-brand-950/35"
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -416,8 +418,8 @@ export function ExpenseListRow({
           <span
             className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide md:hidden ${
               expense.completed
-                ? "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200"
-                : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                ? "bg-surface-muted text-ink-muted"
+                : "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200"
             }`}
           >
             {expense.completed ? "Done" : "Pending"}
@@ -437,30 +439,29 @@ export function ExpenseListRow({
           )}
         </div>
 
-        {/* Desktop action buttons */}
+        {/* Desktop action buttons — one completion control based on state */}
         <div className="hidden flex-wrap items-center justify-end gap-2 md:flex">
-          <form action={setExpenseCompletedAction}>
-            <input type="hidden" name="id" value={expense.id} />
-            <input type="hidden" name="completed" value="true" />
-            <PendingSubmitButton
-              idle="Complete"
-              className={`px-2 py-1 text-xs ${
-                expense.completed ? "btn-primary" : "btn-secondary"
-              }`}
-              pendingLabel="Saving"
-            />
-          </form>
-          <form action={setExpenseCompletedAction}>
-            <input type="hidden" name="id" value={expense.id} />
-            <input type="hidden" name="completed" value="false" />
-            <PendingSubmitButton
-              idle="Not complete"
-              className={`whitespace-nowrap px-2 py-1 text-xs ${
-                expense.completed ? "btn-secondary" : "btn-primary"
-              }`}
-              pendingLabel="Saving"
-            />
-          </form>
+          {expense.completed ? (
+            <form action={setExpenseCompletedAction}>
+              <input type="hidden" name="id" value={expense.id} />
+              <input type="hidden" name="completed" value="false" />
+              <PendingSubmitButton
+                idle="Not complete"
+                className="btn-secondary whitespace-nowrap px-2 py-1 text-xs"
+                pendingLabel="Saving"
+              />
+            </form>
+          ) : (
+            <form action={setExpenseCompletedAction}>
+              <input type="hidden" name="id" value={expense.id} />
+              <input type="hidden" name="completed" value="true" />
+              <PendingSubmitButton
+                idle="Complete"
+                className="btn-primary px-2 py-1 text-xs"
+                pendingLabel="Saving"
+              />
+            </form>
+          )}
           <button
             type="button"
             onClick={() => setEditing(true)}
