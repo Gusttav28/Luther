@@ -16,7 +16,7 @@ import { CategoryPicker, type CategoryOption } from "@/components/category-picke
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { ExpenseRow } from "@/lib/queries/expenses";
 
-const MENU_WIDTH = 160;
+const MENU_WIDTH = 180;
 const MENU_EST_HEIGHT = 140;
 
 function menuPositionFor(button: HTMLElement): { top: number; left: number } {
@@ -35,6 +35,53 @@ function menuPositionFor(button: HTMLElement): { top: number; left: number } {
 
 const ENTRY_CURRENCIES: Currency[] = ["CRC", "USD"];
 
+const statusButtonClass = (selected: boolean) =>
+  `rounded-xl border px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
+    selected
+      ? "border-brand-700 bg-brand-50 text-brand-900 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-100"
+      : "border-line bg-surface-card text-ink-secondary"
+  }`;
+
+function ExpenseStatusControl({
+  completed,
+  onChange,
+  error,
+}: {
+  completed: boolean;
+  onChange: (completed: boolean) => void;
+  error?: string;
+}) {
+  return (
+    <div>
+      <p className="field-label">Status</p>
+      <input type="hidden" name="completed" value={completed ? "true" : "false"} />
+      <div
+        className="mt-1.5 grid grid-cols-2 gap-2"
+        role="group"
+        aria-label="Expense status"
+      >
+        <button
+          type="button"
+          aria-pressed={!completed}
+          onClick={() => onChange(false)}
+          className={statusButtonClass(!completed)}
+        >
+          Planning
+        </button>
+        <button
+          type="button"
+          aria-pressed={completed}
+          onClick={() => onChange(true)}
+          className={statusButtonClass(completed)}
+        >
+          Already charged
+        </button>
+      </div>
+      {error ? <p className="error-text">{error}</p> : null}
+    </div>
+  );
+}
+
 export function AddExpenseForm({
   categories,
   defaultDate,
@@ -47,6 +94,7 @@ export function AddExpenseForm({
   onSuccess?: () => void;
 }) {
   const [state, formAction] = useActionState(createExpenseAction, initialActionState);
+  const [completed, setCompleted] = useState(false);
   const sheet = variant === "sheet";
   const idPrefix = sheet ? "sheet-expense" : "expense";
 
@@ -197,6 +245,11 @@ export function AddExpenseForm({
           </div>
         </div>
       )}
+      <ExpenseStatusControl
+        completed={completed}
+        onChange={setCompleted}
+        error={state.errors?.completed}
+      />
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
       <PendingSubmitButton
         idle="Add expense"
@@ -361,7 +414,7 @@ export function ExpenseListRow({
                 value={expense.completed ? "false" : "true"}
               />
               <PendingSubmitButton
-                idle={expense.completed ? "Not complete" : "Complete"}
+                idle={expense.completed ? "Planning" : "Already charged"}
                 className="w-full justify-start rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surface-muted"
                 pendingLabel="Saving"
               />
@@ -411,18 +464,18 @@ export function ExpenseListRow({
               <span className="hidden md:inline">
                 {expense.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ·{" "}
                 {expense.categoryName}
-                {expense.completed ? "" : " · Not complete"}
+                {expense.completed ? "" : " · Planning"}
               </span>
             </p>
           </div>
           <span
-            className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide md:hidden ${
+            className={`mt-0.5 max-w-[7.5rem] shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-tight tracking-wide md:hidden ${
               expense.completed
                 ? "bg-surface-muted text-ink-muted"
                 : "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200"
             }`}
           >
-            {expense.completed ? "Done" : "Pending"}
+            {expense.completed ? "Already charged" : "Planning"}
           </span>
         </div>
       </div>
@@ -446,7 +499,7 @@ export function ExpenseListRow({
               <input type="hidden" name="id" value={expense.id} />
               <input type="hidden" name="completed" value="false" />
               <PendingSubmitButton
-                idle="Not complete"
+                idle="Planning"
                 className="btn-secondary whitespace-nowrap px-2 py-1 text-xs"
                 pendingLabel="Saving"
               />
@@ -456,8 +509,8 @@ export function ExpenseListRow({
               <input type="hidden" name="id" value={expense.id} />
               <input type="hidden" name="completed" value="true" />
               <PendingSubmitButton
-                idle="Complete"
-                className="btn-primary px-2 py-1 text-xs"
+                idle="Already charged"
+                className="btn-primary whitespace-nowrap px-2 py-1 text-xs"
                 pendingLabel="Saving"
               />
             </form>

@@ -8,6 +8,8 @@ import {
   settingsSchema,
   isoDateSchema,
   rateSchema,
+  completedCreateSchema,
+  parseCompletedCreate,
 } from "@/lib/validation";
 
 describe("amountSchema (R11)", () => {
@@ -78,6 +80,30 @@ describe("expenseSchema (R4)", () => {
   });
   it("rejects an unsupported currency", () => {
     expect(expenseSchema.safeParse({ ...base, currency: "EUR" }).success).toBe(false);
+  });
+  it("still accepts an expense when completed is omitted", () => {
+    const parsed = expenseSchema.safeParse(base);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect("completed" in parsed.data).toBe(false);
+    }
+  });
+});
+
+describe("completedCreateSchema (expense-create-status)", () => {
+  it("maps missing/empty to Planning (false)", () => {
+    expect(parseCompletedCreate(null).data).toBe(false);
+    expect(parseCompletedCreate(undefined).data).toBe(false);
+    expect(completedCreateSchema.parse("")).toBe(false);
+  });
+  it("maps \"false\" to Planning and \"true\" to Already charged", () => {
+    expect(completedCreateSchema.parse("false")).toBe(false);
+    expect(completedCreateSchema.parse("true")).toBe(true);
+  });
+  it("rejects invalid values (does not coerce)", () => {
+    expect(completedCreateSchema.safeParse("yes").success).toBe(false);
+    expect(completedCreateSchema.safeParse("1").success).toBe(false);
+    expect(completedCreateSchema.safeParse("TRUE").success).toBe(false);
   });
 });
 

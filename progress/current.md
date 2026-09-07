@@ -1,41 +1,48 @@
 # Current implementation progress
 
-- Work item: mobile-projects-layout (`specs/mobile-projects-layout/`)
-- Branch: `feature/mobile-projects-layout`
-- Spec package: 2026-08-04, human-approved (owner **GO** on 2026-08-04)
-- Implementer session: 2026-08-04
+- Work item: expense-create-status (`specs/expense-create-status/`)
+- Branch: `cursor/expense-create-status-ef43`
+- Spec package: 2026-09-07, human-approved (owner **GO** on 2026-09-07)
+- Implementer session: 2026-09-07
 - Handoff: **IMPLEMENTED**
 
 ## Files read
 
 - `AGENTS.md`, `.agents/implementer.md`
-- `specs/mobile-projects-layout/{requirements,design,tasks}.md` (complete)
-- Existing projects page, project-forms, add-income/savings sheet patterns
+- `specs/expense-create-status/{requirements,design,tasks}.md` (complete)
+- Existing expense create action, `expenseSchema`, AddExpenseForm sheet/card, ExpenseListRow, income period toggle pattern
 
 ## Files changed
 
-### T1 — Add project sheet + sheet form variant
+### T1 — Parse and validate create-time `completed`
 
-- `components/add-project-sheet.tsx` — bottom sheet (backdrop, handle, title, X)
-- `app/(app)/projects/project-forms.tsx` — `AddProjectForm` `variant="sheet"` + `onSuccess`
+- `lib/validation.ts` — `completedCreateSchema` + `parseCompletedCreate` (missing/empty → false; `"true"`/`"false"` only; not on `expenseSchema`)
+- `tests/unit/validation.test.ts` — default Planning, true/false mapping, reject invalid; expense schema still omits `completed`
 
-### T2 — Mobile Projects layout + Details expand
+### T2 — Persist chosen flag on create
 
-- `components/projects/mobile-projects.tsx` — summary, funding progress list, All projects + Add trigger
-- `app/(app)/projects/project-forms.tsx` — `ProjectCard` `variant="mobile"` with Details/Hide details
-- `app/(app)/projects/page.tsx` — `md:hidden` mobile / `hidden md:block` desktop; inline Add hidden on mobile
+- `app/(app)/expenses/actions.ts` — `createExpenseAction` writes parsed `completed`; `copyExpensesMonthAction` still `completed: false`; `updateExpenseAction` still does not write `completed`; `setExpenseCompletedAction` unchanged
 
-### T3 — Handoff
+### T3 — Two-option control on Add expense
+
+- `app/(app)/expenses/expense-forms.tsx` — `ExpenseStatusControl` on sheet and card; default Planning; hidden `completed` `"false"`/`"true"`
+
+### T4 — List/row copy
+
+- `app/(app)/expenses/expense-forms.tsx` — `ExpenseListRow` labels: Planning / Already charged (badge, desktop meta, desktop button, mobile ⋮). Toggle still `setExpenseCompletedAction`. Edit form unchanged.
+
+### T5 — Handoff
 
 - `progress/current.md` — this file
 
 ## Verification
 
-- TV1–TV2: owner manual (~375px Add sheet + Details expand; desktop unchanged; no new deps)
-- `package.json` dependencies unchanged
+- TV4: `npx vitest run tests/unit/validation.test.ts` (run after this handoff)
+- TV1–TV3: owner/browser check of sheet + desktop add and row toggle
+- TV5: no new deps; spent queries untouched; export copy still incomplete
 
 ## Notes for Reviewer
 
-- Funding progress on mobile is a percent bar list (reference), not Recharts
-- Edit still swaps the card into the existing inline edit form when expanded
-- Project math / waterfall unchanged; presentation-only mobile redesign
+- Reuses `Expense.completed`; no schema change
+- Sheet host `components/add-expense-sheet.tsx` unchanged
+- Visual row highlight (opacity / brand) unchanged; copy only
