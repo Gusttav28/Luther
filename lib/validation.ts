@@ -96,7 +96,7 @@ export const completedCreateSchema = z
   .transform((v) => v === "true");
 
 /** Parse FormData `completed` for create. Null/undefined → Planning. */
-export function parseCompletedCreate(raw: unknown): z.SafeParseReturnType<string, boolean> {
+export function parseCompletedCreate(raw: unknown) {
   const value = raw == null ? "" : String(raw);
   return completedCreateSchema.safeParse(value);
 }

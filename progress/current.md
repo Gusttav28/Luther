@@ -37,9 +37,9 @@
 
 ## Verification
 
-- TV4: `npx vitest run tests/unit/validation.test.ts` (run after this handoff)
-- TV1–TV3: owner/browser check of sheet + desktop add and row toggle
-- TV5: no new deps; spent queries untouched; export copy still incomplete
+- TV4: `npx vitest run tests/unit/validation.test.ts` — 21 passed when run without Prisma globalSetup (this environment has no Postgres). The default vitest config `tests/global-setup.ts` requires `DATABASE_URL` / `DIRECT_URL` and cannot `prisma db push` here.
+- TV1–TV3: require a running app + owner session; not executed in this environment (no `.env` / database). Owner should confirm on `/expenses`.
+- TV5: `requireUserId` retained on create; `copyExpensesMonthAction` still `completed: false`; spent queries still `completed: true`; `package.json` dependencies unchanged; no schema change.
 
 ## Notes for Reviewer
 

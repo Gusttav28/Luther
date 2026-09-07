@@ -403,8 +403,8 @@ export function ExpenseListRow({
             ref={menuRef}
             role="menu"
             aria-label="Expense actions"
-            className="fixed z-50 w-40 rounded-xl border border-line bg-surface-elevated p-1 shadow-card md:hidden"
-            style={{ top: menuPos.top, left: menuPos.left }}
+            className="fixed z-50 rounded-xl border border-line bg-surface-elevated p-1 shadow-card md:hidden"
+            style={{ top: menuPos.top, left: menuPos.left, width: MENU_WIDTH }}
           >
             <form action={setExpenseCompletedAction}>
               <input type="hidden" name="id" value={expense.id} />
