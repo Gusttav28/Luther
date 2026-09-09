@@ -1,5 +1,5 @@
 /**
- * Percentage savings waterfall (received leftover after reserved Planning bills).
+ * Percentage savings waterfall (Main cash after remaining Planning bills).
  * All amounts are integer minor units. Percentage takes use floor so we never over-allocate.
  */
 
@@ -10,9 +10,8 @@ export const PROJECT_ALLOCATION_MIN_PERCENT = 1;
 export type PeriodMode = "H1" | "H2" | "BOTH";
 
 export interface WaterfallInput {
-  receivedIncomeMinor: number;
-  chargedExpensesMinor: number;
-  planningExpensesMinor: number;
+  mainCashMinor: number;
+  remainingPlanningMinor: number;
   /** Project allocation percent of post-lifetime leftover; clamped to 1–70 when computing take. */
   projectAllocationPercent?: number;
 }
@@ -37,20 +36,19 @@ export function percentOf(amountMinor: number, percent: number): number {
   return Math.floor((amountMinor * percent) / 100);
 }
 
-export function leftoverAfterReserves(
-  receivedIncomeMinor: number,
-  chargedExpensesMinor: number,
-  planningExpensesMinor: number
+/** Leftover after remaining Planning. Charged is not an input (already reduced Main). */
+export function leftoverAfterPlannedBills(
+  mainCashMinor: number,
+  remainingPlanningMinor: number
 ): number {
-  return Math.max(0, receivedIncomeMinor - chargedExpensesMinor - planningExpensesMinor);
+  return Math.max(0, mainCashMinor - remainingPlanningMinor);
 }
 
 /** Compute leftover → 70% lifetime → post-lifetime → optional project take. */
 export function computeWaterfall(input: WaterfallInput): WaterfallResult {
-  const leftoverMinor = leftoverAfterReserves(
-    input.receivedIncomeMinor,
-    input.chargedExpensesMinor,
-    input.planningExpensesMinor
+  const leftoverMinor = leftoverAfterPlannedBills(
+    input.mainCashMinor,
+    input.remainingPlanningMinor
   );
   const lifetimeTakeMinor = percentOf(leftoverMinor, LIFETIME_SAVINGS_PERCENT);
   const postLifetimeMinor = leftoverMinor - lifetimeTakeMinor;
@@ -69,7 +67,7 @@ export function computeWaterfall(input: WaterfallInput): WaterfallResult {
 
 /**
  * Extra lifetime take that would appear if planned salary were received.
- * Display-only — not materialized into the Savings account.
+ * Display-only on Savings — not used for Overview leftover or materialize.
  */
 export function plannedSalaryTakeMinor(input: {
   receivedIncomeMinor: number;
@@ -77,17 +75,21 @@ export function plannedSalaryTakeMinor(input: {
   chargedExpensesMinor: number;
   planningExpensesMinor: number;
 }): number {
-  const actual = computeWaterfall({
-    receivedIncomeMinor: input.receivedIncomeMinor,
-    chargedExpensesMinor: input.chargedExpensesMinor,
-    planningExpensesMinor: input.planningExpensesMinor,
-  }).lifetimeTakeMinor;
-  const combined = computeWaterfall({
-    receivedIncomeMinor: input.receivedIncomeMinor + input.plannedSalaryMinor,
-    chargedExpensesMinor: input.chargedExpensesMinor,
-    planningExpensesMinor: input.planningExpensesMinor,
-  }).lifetimeTakeMinor;
-  return combined - actual;
+  const actualLeftover = Math.max(
+    0,
+    input.receivedIncomeMinor - input.chargedExpensesMinor - input.planningExpensesMinor
+  );
+  const combinedLeftover = Math.max(
+    0,
+    input.receivedIncomeMinor +
+      input.plannedSalaryMinor -
+      input.chargedExpensesMinor -
+      input.planningExpensesMinor
+  );
+  return (
+    percentOf(combinedLeftover, LIFETIME_SAVINGS_PERCENT) -
+    percentOf(actualLeftover, LIFETIME_SAVINGS_PERCENT)
+  );
 }
 
 /** Display composition only — does not recompute leftover. */

@@ -17,7 +17,7 @@ const base: OverviewFigures = {
   lifetimeSavingsBalance: 500_00,
   leftoverMinor: 60_00,
   postLifetimeMinor: 18_00,
-  savedFromPlannedMinor: 0,
+  plannedExpensesMinor: 0,
 };
 
 describe("overview-dashboard helpers (R4)", () => {

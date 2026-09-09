@@ -1,81 +1,34 @@
 # Current implementation progress
 
-- Work item: balance-user-accounts (`specs/balance-user-accounts/`)
-- Branch: `cursor/balance-user-accounts-ef43`
-- Spec package: 2026-09-09, human-approved (owner **GO** on 2026-09-09)
-- Implementer session: 2026-09-09
+- Work item: main-cash-planned-savings (`specs/main-cash-planned-savings/`)
+- Branch: `cursor/main-cash-planned-savings-ef43`
+- Spec package: 2026-09-09 (amended same day: Already charged reduces Main)
+- Human approval: **GO** 2026-09-09
 - Handoff: **IMPLEMENTED**
+- Review: **APPROVED** (`reviews/main-cash-planned-savings/review.md`, re-review after `4adcc89`)
 
-## Files read
+## Outcome
 
-- `AGENTS.md`, `.agents/implementer.md`
-- `specs/balance-user-accounts/{requirements,design,tasks}.md` (complete)
-- Prisma schema/migration, validation, waterfall, waterfall-scope, accounts, balance page/mobile, savings sheet, settings/income/expense/savings/overview actions
+Overview Main is stored Main cash. Charging an expense subtracts from Main (`7_323_300 − 1_000_000 → 6_323_300`). Leftover is `max(0, current Main − remaining Planning)`; 70% of leftover is the month take (H1 waterfall row; H2 is 0). Overview cards: Main, Savings (month take), Planned expenses.
 
-## Files changed
+## Tasks
 
-### T1 — Schema
-
-- `prisma/schema.prisma` — `AccountKind`, `Account`, `AccountEntry`; User relations; index `[userId, kind]`; no `@@unique([userId, kind])`
-- `prisma/migrations/20260909090000_balance_user_accounts/migration.sql` — tables, FKs, cascade, partial unique MAIN/SAVINGS
-
-### T2 — Validation
-
-- `lib/validation.ts` — `accountCreateSchema`, opening schemas, `accountEntrySchema` (signed via add/withdraw), rename/delete/Main opening
-- `tests/unit/validation.test.ts` — Custom name required; Savings negative opening rejected; Main negative opening allowed; signed Custom amounts
-
-### T3 — Queries
-
-- `lib/queries/accounts.ts` — `getDerivedAccounts` unchanged (lifetime only). List + Savings all-time (opening + lifetime) + month breakdown via `getScopeAmounts("BOTH")` + `waterfallFromScope` + `plannedTakeFromScope`. Custom hint = `postLifetimeMinor`. Main display = Total cash − Savings all-time.
-- `lib/waterfall.ts` — leftover formula **unchanged**. Added add-only `savingsMonthBreakdownFromTakes`.
-
-### T4 — Actions
-
-- `app/(app)/balance/actions.ts` — create; reject second MAIN/SAVINGS; Main opening ↔ Settings; Custom entry/rename/cascade delete; `requireUserId`
-- `app/(app)/settings/actions.ts` — writes MAIN opening when the row exists
-
-### T5–T8 — Balance UI
-
-- `app/(app)/balance/page.tsx` — title **Balance and accounts**; accounts section; desktop Add account card; series/current stay Total cash
-- `components/balance/mobile-balance.tsx` — same title; empty + populated **Add account** CTA; sheet
-- `app/(app)/balance/account-forms.tsx`, `components/balance/add-account-sheet.tsx`, `components/balance/account-section.tsx` — kind picker, Savings labels, Custom leftover hint / add-withdraw / rename / confirm delete, Main opening edit
-
-### T9 — Revalidate `/balance`
-
-- income, expense (including completed + copy month), savings, settings, overview refresh, account actions
-
-### T10 — Tests
-
-- `tests/unit/waterfall.test.ts` — leftover cases kept; `actual + fromPlanned === combined`
-- `tests/unit/account-breakdown.test.ts` — `projectedSum === fromMain + fromPlanned`; received 100 / planned 50 / charged 20 / planning 0 → 56 / 91 / 35
-- `vitest.waterfall.config.ts` — includes both waterfall files
-
-### T11 — this file
-
-### Follow-up — Vercel `react-hooks/set-state-in-effect`
-
-- `app/(app)/balance/account-forms.tsx` — kind picker derives the open Main/Savings/Custom slot from props instead of `setKind` in `useEffect` (production build lint).
-
-### Follow-up — Balance 500 when Account tables are missing
-
-- `lib/queries/accounts.ts` — if production Postgres has not applied `Account` / `AccountEntry` yet (`P2021`), Balance still loads the cash series with an empty accounts list instead of a server exception. Creating accounts still needs `npx prisma db push` or `npx prisma migrate deploy` against Supabase.
-
-### Follow-up — Main card shows the saved amount + Edit
-
-- `lib/queries/accounts.ts` — Balance Main card balance is the stored opening (what the owner entered), not Total cash − Savings. Overview derived Main is unchanged.
-- `components/balance/account-section.tsx`, `app/(app)/balance/account-forms.tsx` — Main shows the amount and an **Edit** button; the opening fields are only in edit mode.
+- T1 leftover helper + waterfall tests
+- T2 scope + materialize once per month
+- T3 Overview loaders
+- T4 Overview UI cards
+- T5 Balance Savings month lines
+- T6 leftover-encoding tests
+- T8 charge/un-charge applies converted delta to Main
+- T7 this handoff
 
 ## Verification
 
-- TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts` — **12 passed**
-- TV3: `npx vitest run tests/unit/validation.test.ts --config vitest.waterfall.config.ts` — **27 passed** (default vitest `globalSetup` needs `DATABASE_URL`; used the no-DB waterfall config)
-- TV4: `npx prisma generate` and `npx tsc --noEmit` succeeded. `db push` not run (Postgres unset). Partial unique indexes are in the migration; actions still reject a second MAIN/SAVINGS.
-- TV5–TV8: live browser/DB not available in this environment
-- TV9: no new npm deps; Overview `account-cards.tsx` unchanged; `lib/queries/balance.ts` series math unchanged; leftover helpers reused
+- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 48 passed (waterfall, breakdown, main-cash, overview-dashboard, validation).
+- TV2: default `vitest.config.ts` aggregations **skipped** — Postgres at `127.0.0.1:5432` unreachable (`P1001`).
+- TV3–TV5: not run against a live household in this environment (no owner session / seed of ₡73,233).
+- TV6: leftover helper has two inputs (Main, Planning); charged not subtracted again; no new npm packages or Prisma models; expense Main writes scoped by `userId` + `kind = MAIN`.
 
-## Notes for Reviewer
+## Notes
 
-- Overview snapshot still uses `getDerivedAccounts` (lifetime only; Savings opening is not included)
-- Savings waterfall takes are not written as `AccountEntry`
-- Custom leftover hint is `postLifetimeMinor` only — no auto-transfer
-- Nav href remains `/balance`
+Independent Reviewer first verdict was **CHANGES_REQUESTED** (`reviews/main-cash-planned-savings/review.md`): `setExpenseCompletedAction` persisted a charge when convert returned null. Fixed: toggle aborts when status would change and convert is missing (`cannotApplyChargeToggle`). Independent Reviewer re-reviewed and **APPROVED**. Waiting for owner completion.

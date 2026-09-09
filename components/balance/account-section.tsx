@@ -11,8 +11,8 @@ import {
   MainOpeningForm,
 } from "@/app/(app)/balance/account-forms";
 
-const PLANNED_COPY =
-  "From planned salary updates when expenses or planned or received income change.";
+const SAVINGS_COPY =
+  "70% of Main after remaining planned expenses. If those bills cover Main, nothing is saved this month.";
 
 function KindLabel({ kind }: { kind: BalanceAccountView["kind"] }) {
   if (kind === "MAIN") return "Main account";
@@ -110,24 +110,18 @@ export function AccountCards({
           {account.kind === "SAVINGS" ? (
             <dl className="mt-4 space-y-2 border-t border-line pt-3 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-ink-muted">From main account</dt>
+                <dt className="text-ink-muted">This month (70%)</dt>
                 <dd className="font-semibold tabular-nums">
                   <Money minor={breakdown.fromMain} currency={currency} />
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-ink-muted">From planned salary</dt>
+                <dt className="text-ink-muted">Leftover after save</dt>
                 <dd className="font-semibold tabular-nums">
-                  <Money minor={breakdown.fromPlanned} currency={currency} />
+                  <Money minor={leftoverHintMinor} currency={currency} />
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-ink-muted">This month (after expenses)</dt>
-                <dd className="font-semibold tabular-nums">
-                  <Money minor={breakdown.projectedSum} currency={currency} />
-                </dd>
-              </div>
-              <p className="pt-1 text-xs leading-relaxed text-ink-muted">{PLANNED_COPY}</p>
+              <p className="pt-1 text-xs leading-relaxed text-ink-muted">{SAVINGS_COPY}</p>
             </dl>
           ) : null}
 

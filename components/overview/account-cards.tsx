@@ -2,18 +2,18 @@ import { Money } from "@/components/money";
 import type { Currency } from "@/lib/money";
 
 const HINT =
-  "Savings only move after received salary and reserved upcoming bills. From planned salary updates when pay arrives or something is charged.";
+  "70% is saved only after Main covers this month’s remaining planned expenses. Charging a bill lowers Main and Planned expenses.";
 
 export function AccountCards({
   mainAccountMinor,
   savingsAccountMinor,
-  savedFromPlannedMinor,
+  plannedExpensesMinor,
   currency,
   compact = false,
 }: {
   mainAccountMinor: number | null;
   savingsAccountMinor: number | null;
-  savedFromPlannedMinor: number | null;
+  plannedExpensesMinor: number | null;
   currency: Currency;
   compact?: boolean;
 }) {
@@ -39,9 +39,9 @@ export function AccountCards({
           </div>
         </div>
         <div className="mt-[18px] flex items-center justify-between border-t border-line pt-3.5">
-          <span className="text-[12.5px] text-ink-muted">From planned salary</span>
+          <span className="text-[12.5px] text-ink-muted">Planned expenses</span>
           <span className="text-[15px] font-semibold tabular-nums text-ink">
-            <Money minor={savedFromPlannedMinor} currency={currency} />
+            <Money minor={plannedExpensesMinor} currency={currency} />
           </span>
         </div>
         <p className="mt-3 text-[12px] leading-relaxed text-ink-muted">{HINT}</p>
@@ -65,9 +65,9 @@ export function AccountCards({
           </p>
         </div>
         <div className="card">
-          <p className="field-label">From planned salary</p>
+          <p className="field-label">Planned expenses</p>
           <p className="text-xl font-bold tabular-nums tracking-tight text-ink sm:text-2xl">
-            <Money minor={savedFromPlannedMinor} currency={currency} />
+            <Money minor={plannedExpensesMinor} currency={currency} />
           </p>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
 import type { HalfPeriod } from "@/lib/periods";
-import { getScopeAmounts, materializeMonthWaterfall, plannedTakeFromScope, waterfallFromScope } from "@/lib/queries/waterfall-scope";
+import { getScopeAmounts, materializeMonthWaterfall, waterfallFromScope } from "@/lib/queries/waterfall-scope";
 
 export interface OverviewFigures {
   /** All figures in the reporting currency; null when a needed rate is unset. */
@@ -16,8 +16,8 @@ export interface OverviewFigures {
   lifetimeSavingsBalance: number | null;
   leftoverMinor: number | null;
   postLifetimeMinor: number | null;
-  /** Extra 70% leftover take if planned salary were received (display-only). */
-  savedFromPlannedMinor: number | null;
+  /** Remaining Planning expenses this month (Overview Planned expenses card). */
+  plannedExpensesMinor: number | null;
 }
 
 export interface MonthExpenseRow {
@@ -161,8 +161,6 @@ export function figuresFromSnapshot(
   const remaining = sub(earned, spent, saved);
 
   const monthWf = waterfallFromScope(scopes.month);
-  const h1Wf = waterfallFromScope(scopes.h1);
-  const h2Wf = waterfallFromScope(scopes.h2);
 
   const perPeriod: OverviewFigures["perPeriod"] = {
     H1: {
@@ -177,7 +175,7 @@ export function figuresFromSnapshot(
         rates
       ),
       saved:
-        h1Wf?.lifetimeTakeMinor ??
+        monthWf?.lifetimeTakeMinor ??
         toReporting(
           savingsMonth.filter((s) => s.date < h2Start),
           reporting,
@@ -196,12 +194,13 @@ export function figuresFromSnapshot(
         rates
       ),
       saved:
-        h2Wf?.lifetimeTakeMinor ??
-        toReporting(
-          savingsMonth.filter((s) => s.date >= h2Start),
-          reporting,
-          rates
-        ),
+        monthWf
+          ? 0
+          : toReporting(
+              savingsMonth.filter((s) => s.date >= h2Start),
+              reporting,
+              rates
+            ),
     },
   };
 
@@ -217,7 +216,7 @@ export function figuresFromSnapshot(
     lifetimeSavingsBalance,
     leftoverMinor: monthWf?.leftoverMinor ?? null,
     postLifetimeMinor: monthWf?.postLifetimeMinor ?? null,
-    savedFromPlannedMinor: plannedTakeFromScope(scopes.month),
+    plannedExpensesMinor: scopes.month.planningExpensesMinor,
   };
 }
 

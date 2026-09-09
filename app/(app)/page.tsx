@@ -85,7 +85,7 @@ export default async function OverviewPage({
         <AccountCards
           mainAccountMinor={accounts.mainAccountMinor}
           savingsAccountMinor={accounts.savingsAccountMinor}
-          savedFromPlannedMinor={overview.savedFromPlannedMinor}
+          plannedExpensesMinor={accounts.plannedExpensesMinor}
           currency={settings.reportingCurrency}
         />
 
