@@ -4,7 +4,11 @@ import path from "node:path";
 /** Pure unit tests — no Prisma / DB global setup. */
 export default defineConfig({
   test: {
-    include: ["tests/unit/waterfall.test.ts", "tests/unit/account-breakdown.test.ts"],
+    include: [
+      "tests/unit/waterfall.test.ts",
+      "tests/unit/account-breakdown.test.ts",
+      "tests/unit/validation.test.ts",
+    ],
     environment: "node",
     fileParallelism: false,
   },

@@ -54,9 +54,9 @@
 
 ## Verification
 
-- TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts`
-- TV3: `npx vitest run tests/unit/validation.test.ts` (needs `DATABASE_URL` via default `globalSetup`; skip with note if missing)
-- TV4: `npx prisma generate` succeeded; `db push` not run here if Postgres unset. Partial unique indexes are in the migration; actions still reject a second MAIN/SAVINGS.
+- TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts` — **12 passed**
+- TV3: `npx vitest run tests/unit/validation.test.ts --config vitest.waterfall.config.ts` — **27 passed** (default vitest `globalSetup` needs `DATABASE_URL`; used the no-DB waterfall config)
+- TV4: `npx prisma generate` and `npx tsc --noEmit` succeeded. `db push` not run (Postgres unset). Partial unique indexes are in the migration; actions still reject a second MAIN/SAVINGS.
 - TV5–TV8: live browser/DB not available in this environment
 - TV9: no new npm deps; Overview `account-cards.tsx` unchanged; `lib/queries/balance.ts` series math unchanged; leftover helpers reused
 
