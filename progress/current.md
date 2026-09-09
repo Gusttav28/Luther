@@ -52,6 +52,10 @@
 
 ### T11 — this file
 
+### Follow-up — Vercel `react-hooks/set-state-in-effect`
+
+- `app/(app)/balance/account-forms.tsx` — kind picker derives the open Main/Savings/Custom slot from props instead of `setKind` in `useEffect` (production build lint).
+
 ## Verification
 
 - TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts` — **12 passed**
