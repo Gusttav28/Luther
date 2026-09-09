@@ -56,6 +56,10 @@
 
 - `app/(app)/balance/account-forms.tsx` — kind picker derives the open Main/Savings/Custom slot from props instead of `setKind` in `useEffect` (production build lint).
 
+### Follow-up — Balance 500 when Account tables are missing
+
+- `lib/queries/accounts.ts` — if production Postgres has not applied `Account` / `AccountEntry` yet (`P2021`), Balance still loads the cash series with an empty accounts list instead of a server exception. Creating accounts still needs `npx prisma db push` or `npx prisma migrate deploy` against Supabase.
+
 ## Verification
 
 - TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts` — **12 passed**

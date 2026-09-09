@@ -49,6 +49,27 @@ export interface SavingsMonthBreakdown {
 
 export { savingsMonthBreakdownFromTakes };
 
+function isMissingAccountSchema(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String((error as { code: unknown }).code) : "";
+  const message = "message" in error ? String((error as { message: unknown }).message) : "";
+  if (code === "P2021") return true;
+  return /does not exist/i.test(message) && /Account/i.test(message);
+}
+
+async function loadAccountRows(userId: string) {
+  try {
+    return await prisma.account.findMany({
+      where: { userId },
+      include: { entries: { select: { amountMinor: true, currency: true } } },
+      orderBy: [{ createdAt: "asc" }],
+    });
+  } catch (error) {
+    if (isMissingAccountSchema(error)) return [];
+    throw error;
+  }
+}
+
 export interface BalanceAccountView {
   id: string;
   name: string;
@@ -152,11 +173,7 @@ export async function getBalanceAccountsPage(
   settings: AppSettings
 ): Promise<BalanceAccountsPage> {
   const [rows, series, month] = await Promise.all([
-    prisma.account.findMany({
-      where: { userId },
-      include: { entries: { select: { amountMinor: true, currency: true } } },
-      orderBy: [{ createdAt: "asc" }],
-    }),
+    loadAccountRows(userId),
     getBalanceSeries(userId, settings),
     getCurrentMonthBreakdown(userId, settings),
   ]);
