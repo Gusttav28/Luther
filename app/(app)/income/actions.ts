@@ -36,6 +36,7 @@ export async function createIncomeAction(
     revalidatePath("/");
     revalidatePath("/savings");
     revalidatePath("/projects");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -62,6 +63,7 @@ export async function updateIncomeAction(
     revalidatePath("/");
     revalidatePath("/savings");
     revalidatePath("/projects");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -83,4 +85,5 @@ export async function deleteIncomeAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/savings");
   revalidatePath("/projects");
+  revalidatePath("/balance");
 }

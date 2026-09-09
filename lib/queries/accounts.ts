@@ -1,5 +1,13 @@
+import { prisma } from "@/lib/prisma";
+import { sumInCurrency, type Currency } from "@/lib/money";
 import { getBalanceSeries } from "@/lib/queries/balance";
 import { getLifetimeSavingsBalance } from "@/lib/queries/overview";
+import {
+  getScopeAmounts,
+  plannedTakeFromScope,
+  waterfallFromScope,
+} from "@/lib/queries/waterfall-scope";
+import { savingsMonthBreakdownFromTakes } from "@/lib/waterfall";
 import type { AppSettings } from "@/lib/queries/settings";
 
 export interface DerivedAccounts {
@@ -12,8 +20,8 @@ export interface DerivedAccounts {
 }
 
 /**
- * Derived Main / Savings / Total cash. No Account model.
- * Identity when rates exist: Main + Savings = Balance currentBalance.
+ * Derived Main / Savings / Total cash. Overview snapshot — lifetime only, no
+ * Account.opening. Identity when rates exist: Main + Savings = Balance currentBalance.
  */
 export async function getDerivedAccounts(
   userId: string,
@@ -29,4 +37,177 @@ export async function getDerivedAccounts(
       ? null
       : totalCashMinor - savingsAccountMinor;
   return { mainAccountMinor, savingsAccountMinor, totalCashMinor };
+}
+
+export type AccountKind = "MAIN" | "SAVINGS" | "CUSTOM";
+
+export interface SavingsMonthBreakdown {
+  fromMain: number | null;
+  fromPlanned: number | null;
+  projectedSum: number | null;
+}
+
+export { savingsMonthBreakdownFromTakes };
+
+export interface BalanceAccountView {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  openingMinor: number;
+  currency: Currency;
+  /** Reporting-currency display balance; null when a needed rate is missing. */
+  balanceMinor: number | null;
+}
+
+export interface BalanceAccountsPage {
+  accounts: BalanceAccountView[];
+  hasMain: boolean;
+  hasSavings: boolean;
+  breakdown: SavingsMonthBreakdown;
+  leftoverHintMinor: number | null;
+  reportingCurrency: Currency;
+  startingOpeningPrefill: string;
+  startingOpeningCurrency: Currency;
+}
+
+function toReporting(
+  amounts: Array<{ amountMinor: number; currency: string }>,
+  reporting: Currency,
+  rates: AppSettings["rates"]
+): number | null {
+  return sumInCurrency(
+    amounts.map((a) => ({ amountMinor: a.amountMinor, currency: a.currency as Currency })),
+    reporting,
+    rates
+  );
+}
+
+export async function listUserAccounts(userId: string) {
+  return prisma.account.findMany({
+    where: { userId },
+    orderBy: [{ kind: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function getSavingsAllTimeMinor(
+  userId: string,
+  settings: AppSettings,
+  savingsOpening?: { openingMinor: number; currency: string } | null
+): Promise<number | null> {
+  const lifetime = await getLifetimeSavingsBalance(
+    userId,
+    settings.reportingCurrency,
+    settings.rates
+  );
+  if (!savingsOpening) return lifetime;
+  const opening = toReporting(
+    [{ amountMinor: savingsOpening.openingMinor, currency: savingsOpening.currency }],
+    settings.reportingCurrency,
+    settings.rates
+  );
+  if (lifetime === null || opening === null) return null;
+  return opening + lifetime;
+}
+
+export async function getCurrentMonthBreakdown(
+  userId: string,
+  settings: AppSettings,
+  now: Date = new Date()
+): Promise<{ breakdown: SavingsMonthBreakdown; leftoverHintMinor: number | null }> {
+  const scope = await getScopeAmounts(
+    userId,
+    now.getFullYear(),
+    now.getMonth() + 1,
+    "BOTH",
+    settings.reportingCurrency,
+    settings.rates
+  );
+  const wf = waterfallFromScope(scope);
+  const fromMain = wf?.lifetimeTakeMinor ?? null;
+  const fromPlanned = plannedTakeFromScope(scope);
+  return {
+    breakdown: savingsMonthBreakdownFromTakes(fromMain, fromPlanned),
+    leftoverHintMinor: wf?.postLifetimeMinor ?? null,
+  };
+}
+
+function customBalanceMinor(
+  openingMinor: number,
+  openingCurrency: string,
+  entries: Array<{ amountMinor: number; currency: string }>,
+  settings: AppSettings
+): number | null {
+  return toReporting(
+    [
+      { amountMinor: openingMinor, currency: openingCurrency },
+      ...entries.map((e) => ({ amountMinor: e.amountMinor, currency: e.currency })),
+    ],
+    settings.reportingCurrency,
+    settings.rates
+  );
+}
+
+export async function getBalanceAccountsPage(
+  userId: string,
+  settings: AppSettings
+): Promise<BalanceAccountsPage> {
+  const [rows, series, month] = await Promise.all([
+    prisma.account.findMany({
+      where: { userId },
+      include: { entries: { select: { amountMinor: true, currency: true } } },
+      orderBy: [{ createdAt: "asc" }],
+    }),
+    getBalanceSeries(userId, settings),
+    getCurrentMonthBreakdown(userId, settings),
+  ]);
+
+  const savingsRow = rows.find((r) => r.kind === "SAVINGS") ?? null;
+  const savingsAllTime = await getSavingsAllTimeMinor(
+    userId,
+    settings,
+    savingsRow
+      ? { openingMinor: savingsRow.openingMinor, currency: savingsRow.currency }
+      : null
+  );
+  const totalCash = series.currentBalance;
+  const mainDisplay =
+    totalCash === null || savingsAllTime === null ? null : totalCash - savingsAllTime;
+
+  const kindOrder: Record<AccountKind, number> = { MAIN: 0, SAVINGS: 1, CUSTOM: 2 };
+  const accounts: BalanceAccountView[] = rows
+    .map((row) => {
+      let balanceMinor: number | null;
+      if (row.kind === "MAIN") {
+        balanceMinor = mainDisplay;
+      } else if (row.kind === "SAVINGS") {
+        balanceMinor = savingsAllTime;
+      } else {
+        balanceMinor = customBalanceMinor(
+          row.openingMinor,
+          row.currency,
+          row.entries,
+          settings
+        );
+      }
+      return {
+        id: row.id,
+        name: row.name,
+        kind: row.kind,
+        openingMinor: row.openingMinor,
+        currency: row.currency as Currency,
+        balanceMinor,
+      };
+    })
+    .sort((a, b) => kindOrder[a.kind] - kindOrder[b.kind] || a.name.localeCompare(b.name));
+
+  return {
+    accounts,
+    hasMain: rows.some((r) => r.kind === "MAIN"),
+    hasSavings: rows.some((r) => r.kind === "SAVINGS"),
+    breakdown: month.breakdown,
+    leftoverHintMinor: month.leftoverHintMinor,
+    reportingCurrency: settings.reportingCurrency,
+    startingOpeningPrefill: (settings.startingBalanceMinor / 100).toFixed(2),
+    startingOpeningCurrency: settings.startingBalanceCurrency,
+  };
 }

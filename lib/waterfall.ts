@@ -89,3 +89,15 @@ export function plannedSalaryTakeMinor(input: {
   }).lifetimeTakeMinor;
   return combined - actual;
 }
+
+/** Display composition only — does not recompute leftover. */
+export function savingsMonthBreakdownFromTakes(
+  fromMain: number | null,
+  fromPlanned: number | null
+): { fromMain: number | null; fromPlanned: number | null; projectedSum: number | null } {
+  return {
+    fromMain,
+    fromPlanned,
+    projectedSum: fromMain === null || fromPlanned === null ? null : fromMain + fromPlanned,
+  };
+}

@@ -10,6 +10,10 @@ import {
   rateSchema,
   completedCreateSchema,
   parseCompletedCreate,
+  accountCreateSchema,
+  accountEntrySchema,
+  optionalNonNegativeOpeningSchema,
+  mainOpeningSchema,
 } from "@/lib/validation";
 
 describe("amountSchema (R11)", () => {
@@ -140,5 +144,82 @@ describe("isoDateSchema", () => {
     expect(isoDateSchema.safeParse("2026-02-28").success).toBe(true);
     expect(isoDateSchema.safeParse("2026-2-28").success).toBe(false);
     expect(isoDateSchema.safeParse("not-a-date").success).toBe(false);
+  });
+});
+
+describe("accountCreateSchema (balance-user-accounts)", () => {
+  it("defaults Main and Savings names and accepts Main negative opening", () => {
+    const main = accountCreateSchema.parse({
+      kind: "MAIN",
+      name: "",
+      opening: "-25.50",
+      currency: "CRC",
+    });
+    expect(main.name).toBe("Main account");
+    expect(main.opening).toBe(-2550);
+
+    const savings = accountCreateSchema.parse({
+      kind: "SAVINGS",
+      name: "",
+      opening: "",
+      currency: "USD",
+    });
+    expect(savings.name).toBe("Savings account");
+    expect(savings.opening).toBe(0);
+  });
+
+  it("requires a Custom name and does not persist empty names", () => {
+    const empty = accountCreateSchema.safeParse({
+      kind: "CUSTOM",
+      name: "  ",
+      opening: "0",
+      currency: "CRC",
+    });
+    expect(empty.success).toBe(false);
+
+    const prizes = accountCreateSchema.parse({
+      kind: "CUSTOM",
+      name: "Prizes",
+      opening: "10",
+      currency: "CRC",
+    });
+    expect(prizes.name).toBe("Prizes");
+    expect(prizes.opening).toBe(1000);
+  });
+
+  it("rejects a negative Savings opening", () => {
+    expect(optionalNonNegativeOpeningSchema.safeParse("-1").success).toBe(false);
+    expect(
+      accountCreateSchema.safeParse({
+        kind: "SAVINGS",
+        name: "Savings account",
+        opening: "-5",
+        currency: "CRC",
+      }).success
+    ).toBe(false);
+    expect(mainOpeningSchema.parse("-5")).toBe(-500);
+  });
+});
+
+describe("accountEntrySchema (custom add/withdraw)", () => {
+  const base = {
+    accountId: "acc1",
+    date: "2026-09-09",
+    amount: "12.50",
+    currency: "CRC",
+    note: "",
+  };
+  it("accepts add as a positive signed amount", () => {
+    const parsed = accountEntrySchema.parse({ ...base, direction: "add" });
+    expect(parsed.amount).toBe(1250);
+  });
+  it("accepts withdraw as a negative signed amount", () => {
+    const parsed = accountEntrySchema.parse({ ...base, direction: "withdraw" });
+    expect(parsed.amount).toBe(-1250);
+  });
+  it("rejects zero and empty Custom amounts", () => {
+    expect(
+      accountEntrySchema.safeParse({ ...base, amount: "0", direction: "add" }).success
+    ).toBe(false);
   });
 });

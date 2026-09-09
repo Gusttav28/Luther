@@ -38,10 +38,18 @@ export async function updateSettingsAction(
         startingBalanceCurrency: data.startingBalanceCurrency,
       },
     });
+    await prisma.account.updateMany({
+      where: { userId, kind: "MAIN" },
+      data: {
+        openingMinor: data.startingBalance,
+        currency: data.startingBalanceCurrency,
+      },
+    });
     const now = new Date();
     const { year, month } = yearMonthFromDate(now);
     await safeMaterializeMonth(userId, year, month);
     revalidatePath("/", "layout");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;

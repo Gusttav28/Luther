@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { Money } from "@/components/money";
 import { LineChart } from "@/components/charts/line-chart";
 import { BarChart } from "@/components/charts/bar-chart";
@@ -9,6 +10,9 @@ import { CHART_ACCENT } from "@/lib/chart-colors";
 import { periodLabel } from "@/lib/periods";
 import type { Currency } from "@/lib/money";
 import type { BalancePeriodRow } from "@/lib/queries/balance";
+import type { BalanceAccountView, SavingsMonthBreakdown } from "@/lib/queries/accounts";
+import { AccountCards } from "@/components/balance/account-section";
+import { AddAccountSheet } from "@/components/balance/add-account-sheet";
 
 const PERIOD_NEG = "text-[#b3423a]";
 const PERIOD_POS_NET = "text-[#2d6a4f]";
@@ -24,6 +28,14 @@ export function MobileBalance({
   currentBalance,
   rows,
   chartRows,
+  accounts,
+  breakdown,
+  leftoverHintMinor,
+  defaultDate,
+  hasMain,
+  hasSavings,
+  startingOpeningPrefill,
+  startingOpeningCurrency,
 }: {
   currency: Currency;
   startingBalance: number | null;
@@ -35,8 +47,17 @@ export function MobileBalance({
     income: number | null;
     expenses: number | null;
   }>;
+  accounts: BalanceAccountView[];
+  breakdown: SavingsMonthBreakdown;
+  leftoverHintMinor: number | null;
+  defaultDate: string;
+  hasMain: boolean;
+  hasSavings: boolean;
+  startingOpeningPrefill: string;
+  startingOpeningCurrency: Currency;
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [addOpen, setAddOpen] = useState(false);
   const currentNegative = currentBalance !== null && currentBalance < 0;
   const emptyMessage = "No income or expenses recorded yet.";
 
@@ -47,7 +68,9 @@ export function MobileBalance({
   return (
     <div className="space-y-[18px] md:hidden">
       <header>
-        <h1 className="text-[26px] font-bold tracking-[-0.01em] text-ink">Balance</h1>
+        <h1 className="text-[26px] font-bold tracking-[-0.01em] text-ink">
+          Balance and accounts
+        </h1>
       </header>
 
       <section className="card !rounded-[20px]" aria-label="Balance summary">
@@ -200,6 +223,46 @@ export function MobileBalance({
           </ul>
         )}
       </section>
+
+      <section className="card !rounded-[20px] !p-5" aria-label="Accounts">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold tracking-tight text-ink">Accounts</h2>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 transition hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:text-brand-300"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+            Add account
+          </button>
+        </div>
+        {accounts.length === 0 ? (
+          <p className="rounded-[14px] bg-[#f6f7f5] px-3.5 py-3.5 text-sm text-ink-faint dark:bg-surface-muted">
+            Create a Main, Savings, or Custom account. Current balance above stays total cash.
+          </p>
+        ) : (
+          <AccountCards
+            accounts={accounts}
+            breakdown={breakdown}
+            leftoverHintMinor={leftoverHintMinor}
+            currency={currency}
+            defaultDate={defaultDate}
+            startingOpeningPrefill={startingOpeningPrefill}
+            startingOpeningCurrency={startingOpeningCurrency}
+            compact
+          />
+        )}
+      </section>
+
+      <AddAccountSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        hasMain={hasMain}
+        hasSavings={hasSavings}
+        startingOpeningPrefill={startingOpeningPrefill}
+        startingOpeningCurrency={startingOpeningCurrency}
+        defaultCurrency={currency}
+      />
     </div>
   );
 }

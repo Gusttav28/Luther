@@ -126,5 +126,6 @@ describe("waterfall (received leftover after reserved Planning bills)", () => {
     expect(actual).toBe(56_000);
     expect(combined).toBe(91_000);
     expect(fromPlanned).toBe(35_000);
+    expect(actual + fromPlanned).toBe(combined);
   });
 });

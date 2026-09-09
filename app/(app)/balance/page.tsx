@@ -2,25 +2,33 @@ import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/settings";
 import { getBalanceSeries } from "@/lib/queries/balance";
+import { getBalanceAccountsPage } from "@/lib/queries/accounts";
 import { periodLabel } from "@/lib/periods";
 import { Money, RatesNote } from "@/components/money";
 import { LineChart } from "@/components/charts/line-chart";
 import { BarChart } from "@/components/charts/bar-chart";
 import { CHART_ACCENT } from "@/lib/chart-colors";
 import { MobileBalance } from "@/components/balance/mobile-balance";
+import { AccountCards } from "@/components/balance/account-section";
+import { AddAccountForm } from "@/app/(app)/balance/account-forms";
 
 export const dynamic = "force-dynamic";
 
 export default async function BalancePage() {
   const userId = await requireUserId();
   const settings = await getSettings(userId);
-  const series = await getBalanceSeries(userId, settings);
+  const [series, accountsPage] = await Promise.all([
+    getBalanceSeries(userId, settings),
+    getBalanceAccountsPage(userId, settings),
+  ]);
   const chartRows = series.rows.map((row) => ({
     label: periodLabel(row.ref),
     runningBalance: row.runningBalance,
     income: row.income,
     expenses: row.expenses,
   }));
+  const today = new Date();
+  const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -30,11 +38,19 @@ export default async function BalancePage() {
         currentBalance={series.currentBalance}
         rows={series.rows}
         chartRows={chartRows}
+        accounts={accountsPage.accounts}
+        breakdown={accountsPage.breakdown}
+        leftoverHintMinor={accountsPage.leftoverHintMinor}
+        defaultDate={defaultDate}
+        hasMain={accountsPage.hasMain}
+        hasSavings={accountsPage.hasSavings}
+        startingOpeningPrefill={accountsPage.startingOpeningPrefill}
+        startingOpeningCurrency={accountsPage.startingOpeningCurrency}
       />
 
       <div className="hidden space-y-6 md:block">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="page-title">Balance</h1>
+          <h1 className="page-title">Balance and accounts</h1>
           <RatesNote usdToCrc={settings.rates.usdToCrc} />
         </div>
 
@@ -134,6 +150,35 @@ export default async function BalancePage() {
               </table>
             </div>
           )}
+        </section>
+
+        <section className="space-y-4" aria-label="Accounts">
+          <div>
+            <h2 className="text-base font-semibold">Accounts</h2>
+            {accountsPage.accounts.length === 0 ? (
+              <p className="mt-1 text-sm text-ink-muted">
+                Create a Main, Savings, or Custom account. The running series above stays total
+                cash.
+              </p>
+            ) : null}
+          </div>
+          <AccountCards
+            accounts={accountsPage.accounts}
+            breakdown={accountsPage.breakdown}
+            leftoverHintMinor={accountsPage.leftoverHintMinor}
+            currency={settings.reportingCurrency}
+            defaultDate={defaultDate}
+            startingOpeningPrefill={accountsPage.startingOpeningPrefill}
+            startingOpeningCurrency={accountsPage.startingOpeningCurrency}
+          />
+          <AddAccountForm
+            hasMain={accountsPage.hasMain}
+            hasSavings={accountsPage.hasSavings}
+            startingOpeningPrefill={accountsPage.startingOpeningPrefill}
+            startingOpeningCurrency={accountsPage.startingOpeningCurrency}
+            defaultCurrency={settings.reportingCurrency}
+            variant="card"
+          />
         </section>
       </div>
     </div>

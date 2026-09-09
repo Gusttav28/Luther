@@ -1,63 +1,68 @@
 # Current implementation progress
 
-- Work item: received-savings-accounts (`specs/received-savings-accounts/`)
-- Branch: `cursor/received-savings-accounts-ef43`
-- Spec package: 2026-09-09, human-approved (owner **GO** on 2026-09-09; R11 planned-salary display same day)
+- Work item: balance-user-accounts (`specs/balance-user-accounts/`)
+- Branch: `cursor/balance-user-accounts-ef43`
+- Spec package: 2026-09-09, human-approved (owner **GO** on 2026-09-09)
 - Implementer session: 2026-09-09
 - Handoff: **IMPLEMENTED**
 
 ## Files read
 
 - `AGENTS.md`, `.agents/implementer.md`
-- `specs/received-savings-accounts/{requirements,design,tasks}.md` (complete, including R11)
-- Waterfall, waterfall-scope, overview, savings, projects, balance, KPI/overview UI, savings copy
+- `specs/balance-user-accounts/{requirements,design,tasks}.md` (complete)
+- Prisma schema/migration, validation, waterfall, waterfall-scope, accounts, balance page/mobile, savings sheet, settings/income/expense/savings/overview actions
 
 ## Files changed
 
-### T1 — Leftover math
+### T1 — Schema
 
-- `lib/waterfall.ts` — received / charged / planning leftover; 70% of leftover; `plannedSalaryTakeMinor`
-- `tests/unit/waterfall.test.ts` — reserve gate, not-gross-salary, from-planned subtract
+- `prisma/schema.prisma` — `AccountKind`, `Account`, `AccountEntry`; User relations; index `[userId, kind]`; no `@@unique([userId, kind])`
+- `prisma/migrations/20260909090000_balance_user_accounts/migration.sql` — tables, FKs, cascade, partial unique MAIN/SAVINGS
 
-### T2 — Scope loaders
+### T2 — Validation
 
-- `lib/queries/waterfall-scope.ts` — received-only income; planning expenses; `waterfallFromScope` / `plannedTakeFromScope`; materialize uses new leftover
+- `lib/validation.ts` — `accountCreateSchema`, opening schemas, `accountEntrySchema` (signed via add/withdraw), rename/delete/Main opening
+- `tests/unit/validation.test.ts` — Custom name required; Savings negative opening rejected; Main negative opening allowed; signed Custom amounts
 
-### T3 — Query consumers
+### T3 — Queries
 
-- `lib/queries/overview.ts`, `savings.ts`, `projects.ts` — new scope fields
+- `lib/queries/accounts.ts` — `getDerivedAccounts` unchanged (lifetime only). List + Savings all-time (opening + lifetime) + month breakdown via `getScopeAmounts("BOTH")` + `waterfallFromScope` + `plannedTakeFromScope`. Custom hint = `postLifetimeMinor`. Main display = Total cash − Savings all-time.
+- `lib/waterfall.ts` — leftover formula **unchanged**. Added add-only `savingsMonthBreakdownFromTakes`.
 
-### T4 — Derived accounts
+### T4 — Actions
 
-- `lib/queries/accounts.ts` — Main = Total cash − Savings; Total cash from `getBalanceSeries`
-- `lib/queries/overview-dashboard.ts` — returns `accounts`
+- `app/(app)/balance/actions.ts` — create; reject second MAIN/SAVINGS; Main opening ↔ Settings; Custom entry/rename/cascade delete; `requireUserId`
+- `app/(app)/settings/actions.ts` — writes MAIN opening when the row exists
 
-### T5 — Overview UI
+### T5–T8 — Balance UI
 
-- `components/overview/account-cards.tsx` — Main, Savings, From planned salary
-- `app/(app)/page.tsx`, `components/overview/mobile-overview.tsx`, `kpi-cards.tsx` — accounts row; lifetime KPI removed
+- `app/(app)/balance/page.tsx` — title **Balance and accounts**; accounts section; desktop Add account card; series/current stay Total cash
+- `components/balance/mobile-balance.tsx` — same title; empty + populated **Add account** CTA; sheet
+- `app/(app)/balance/account-forms.tsx`, `components/balance/add-account-sheet.tsx`, `components/balance/account-section.tsx` — kind picker, Savings labels, Custom leftover hint / add-withdraw / rename / confirm delete, Main opening edit
 
-### T6 — Savings copy
+### T9 — Revalidate `/balance`
 
-- `app/(app)/savings/page.tsx`, `components/savings/mobile-savings.tsx` — received + reserved bills + From planned salary
+- income, expense (including completed + copy month), savings, settings, overview refresh, account actions
 
-### T7 / T8
+### T10 — Tests
 
-- `tests/unit/aggregations.test.ts` — July Saved = 70% of received leftover; planned seed excluded
-- `tests/unit/overview-dashboard.test.ts` — fixture fields for new OverviewFigures
-- R11 wired on Overview + Savings
+- `tests/unit/waterfall.test.ts` — leftover cases kept; `actual + fromPlanned === combined`
+- `tests/unit/account-breakdown.test.ts` — `projectedSum === fromMain + fromPlanned`; received 100 / planned 50 / charged 20 / planning 0 → 56 / 91 / 35
+- `vitest.waterfall.config.ts` — includes both waterfall files
 
-### T9 — this file
+### T11 — this file
 
 ## Verification
 
-- TV1: `npx vitest run tests/unit/waterfall.test.ts --config vitest.waterfall.config.ts` (run after this handoff)
-- TV2: aggregations need Postgres (`tests/global-setup.ts`); not run if DATABASE_URL missing
-- TV3–TV5: owner/browser on a live session
-- TV6: no new deps; no schema change; `balance.ts` math unchanged
+- TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts`
+- TV3: `npx vitest run tests/unit/validation.test.ts` (needs `DATABASE_URL` via default `globalSetup`; skip with note if missing)
+- TV4: `npx prisma generate` succeeded; `db push` not run here if Postgres unset. Partial unique indexes are in the migration; actions still reject a second MAIN/SAVINGS.
+- TV5–TV8: live browser/DB not available in this environment
+- TV9: no new npm deps; Overview `account-cards.tsx` unchanged; `lib/queries/balance.ts` series math unchanged; leftover helpers reused
 
 ## Notes for Reviewer
 
-- Actual Savings account / materialized take uses received leftover only
-- **From planned salary** is display-only (`combinedTake − actualTake`)
-- Main + Savings = Balance current balance
+- Overview snapshot still uses `getDerivedAccounts` (lifetime only; Savings opening is not included)
+- Savings waterfall takes are not written as `AccountEntry`
+- Custom leftover hint is `postLifetimeMinor` only — no auto-transfer
+- Nav href remains `/balance`

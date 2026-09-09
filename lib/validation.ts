@@ -195,6 +195,120 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const accountKindSchema = z.enum(["MAIN", "SAVINGS", "CUSTOM"]);
+
+const DEFAULT_MAIN_NAME = "Main account";
+const DEFAULT_SAVINGS_NAME = "Savings account";
+
+/** Settings-like opening: empty/0 allowed; negative allowed. */
+export const mainOpeningSchema = z
+  .string()
+  .trim()
+  .refine(
+    (v) => {
+      const raw = v.startsWith("-") ? v.slice(1) : v;
+      return raw === "" || parseAmountToMinor(raw) !== null || raw === "0";
+    },
+    { message: "Enter an amount with at most 2 decimal places" }
+  )
+  .transform((v) => {
+    if (v === "" || v === "0") return 0;
+    const negative = v.startsWith("-");
+    const minor = parseAmountToMinor(negative ? v.slice(1) : v) ?? 0;
+    return negative ? -minor : minor;
+  });
+
+/** Savings/Custom opening: blank → 0; reject negatives. */
+export const optionalNonNegativeOpeningSchema = z
+  .string()
+  .trim()
+  .refine(
+    (v) => {
+      if (v === "" || v === "0") return true;
+      if (v.startsWith("-")) return false;
+      return parseAmountToMinor(v) !== null;
+    },
+    { message: "Enter a non-negative amount with at most 2 decimal places" }
+  )
+  .transform((v) => {
+    if (v === "" || v === "0") return 0;
+    return parseAmountToMinor(v)!;
+  });
+
+export const accountCreateSchema = z
+  .object({
+    kind: accountKindSchema,
+    name: z.string().trim().max(120),
+    opening: z.string(),
+    currency: anyCurrencySchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.kind === "CUSTOM" && data.name.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Name is required",
+        path: ["name"],
+      });
+    }
+    const openingParsed =
+      data.kind === "MAIN"
+        ? mainOpeningSchema.safeParse(data.opening)
+        : optionalNonNegativeOpeningSchema.safeParse(data.opening);
+    if (!openingParsed.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          data.kind === "MAIN"
+            ? "Enter an amount with at most 2 decimal places"
+            : "Enter a non-negative amount with at most 2 decimal places",
+        path: ["opening"],
+      });
+    }
+  })
+  .transform((data) => {
+    const opening =
+      data.kind === "MAIN"
+        ? mainOpeningSchema.parse(data.opening)
+        : optionalNonNegativeOpeningSchema.parse(data.opening);
+    const name =
+      data.name ||
+      (data.kind === "MAIN" ? DEFAULT_MAIN_NAME : data.kind === "SAVINGS" ? DEFAULT_SAVINGS_NAME : data.name);
+    return { kind: data.kind, name, opening, currency: data.currency };
+  });
+
+export const accountRenameSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1, "Name is required").max(120),
+});
+
+export const mainOpeningUpdateSchema = z.object({
+  id: z.string().min(1),
+  opening: mainOpeningSchema,
+  currency: anyCurrencySchema,
+});
+
+/** Custom add/withdraw: positive amount + direction → signed minor units. */
+export const accountEntrySchema = z
+  .object({
+    accountId: z.string().min(1),
+    date: isoDateSchema,
+    amount: amountSchema,
+    currency: anyCurrencySchema,
+    note: z.string().trim().max(300).optional().or(z.literal("").transform(() => undefined)),
+    direction: z.enum(["add", "withdraw"]),
+  })
+  .transform((data) => ({
+    accountId: data.accountId,
+    date: data.date,
+    amount: data.direction === "withdraw" ? -data.amount : data.amount,
+    currency: data.currency,
+    note: data.note,
+  }));
+
+export const accountDeleteSchema = z.object({
+  id: z.string().min(1),
+});
+
 /** Flatten a Zod error into field → first message, for form display. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {
   const result: Record<string, string> = {};

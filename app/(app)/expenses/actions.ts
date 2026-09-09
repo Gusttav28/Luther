@@ -67,6 +67,7 @@ export async function createExpenseAction(
     revalidatePath("/");
     revalidatePath("/savings");
     revalidatePath("/projects");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -94,6 +95,7 @@ export async function setExpenseCompletedAction(formData: FormData): Promise<voi
   revalidatePath("/");
   revalidatePath("/savings");
   revalidatePath("/projects");
+  revalidatePath("/balance");
 }
 
 export async function updateExpenseAction(
@@ -134,6 +136,7 @@ export async function updateExpenseAction(
     revalidatePath("/");
     revalidatePath("/savings");
     revalidatePath("/projects");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -156,6 +159,7 @@ export async function deleteExpenseAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/savings");
   revalidatePath("/projects");
+  revalidatePath("/balance");
 }
 
 function monthBounds(year: number, month: number): { start: Date; end: Date } {
@@ -256,6 +260,7 @@ export async function copyExpensesMonthAction(
     revalidatePath("/");
     revalidatePath("/savings");
     revalidatePath("/projects");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;

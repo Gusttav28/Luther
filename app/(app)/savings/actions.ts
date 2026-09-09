@@ -56,6 +56,7 @@ export async function createSavingsAction(
     await safeMaterializeMonth(userId, ym.year, ym.month);
     revalidatePath("/savings");
     revalidatePath("/");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -87,6 +88,7 @@ export async function updateSavingsAction(
     await safeMaterializeMonth(userId, ym.year, ym.month);
     revalidatePath("/savings");
     revalidatePath("/");
+    revalidatePath("/balance");
     return { ok: true };
   } catch {
     return GENERIC_ERROR;
@@ -107,4 +109,5 @@ export async function deleteSavingsAction(formData: FormData): Promise<void> {
   }
   revalidatePath("/savings");
   revalidatePath("/");
+  revalidatePath("/balance");
 }

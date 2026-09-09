@@ -22,4 +22,5 @@ export async function rematerializeOverviewAction(
   revalidatePath("/");
   revalidatePath("/savings");
   revalidatePath("/projects");
+  revalidatePath("/balance");
 }

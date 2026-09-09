@@ -26,6 +26,8 @@ model User {
   projects             Project[]
   projectContributions ProjectContribution[]
   savingsContributions SavingsContribution[]
+  accounts             Account[]
+  accountEntries       AccountEntry[]
 }
 
 model Settings {
@@ -161,4 +163,45 @@ model SavingsContribution {
 
   @@index([userId, date])
   @@unique([userId, year, month, period, source])
+}
+
+enum AccountKind {
+  MAIN
+  SAVINGS
+  CUSTOM
+}
+
+/// User-created Balance account. At most one MAIN and one SAVINGS per user
+/// (enforced by partial unique indexes in the migration + action checks).
+/// Do not add @@unique([userId, kind]) — that would cap Custom at one row.
+model Account {
+  id           String      @id @default(cuid())
+  userId       String
+  name         String
+  kind         AccountKind
+  openingMinor Int         @default(0)
+  currency     String
+  createdAt    DateTime    @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries AccountEntry[]
+
+  @@index([userId, kind])
+}
+
+/// Signed ledger for Custom accounts (this item). Opening lives on Account, not here.
+/// Savings waterfall takes are not stored as entries.
+model AccountEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  accountId   String
+  date        DateTime
+  amountMinor Int
+  currency    String
+  note        String?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, accountId])
 }
