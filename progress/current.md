@@ -5,6 +5,7 @@
 - Spec package: 2026-09-09 (amended same day: Already charged reduces Main)
 - Human approval: **GO** 2026-09-09
 - Handoff: **IMPLEMENTED**
+- Review: **APPROVED** (`reviews/main-cash-planned-savings/review.md`, re-review after `4adcc89`)
 
 ## Outcome
 
@@ -30,4 +31,4 @@ Overview Main is stored Main cash. Charging an expense subtracts from Main (`7_3
 
 ## Notes
 
-Independent Reviewer first verdict was **CHANGES_REQUESTED** (`reviews/main-cash-planned-savings/review.md`): `setExpenseCompletedAction` persisted a charge when convert returned null. Fixed: toggle aborts when status would change and convert is missing (`cannotApplyChargeToggle`). Waiting for re-review.
+Independent Reviewer first verdict was **CHANGES_REQUESTED** (`reviews/main-cash-planned-savings/review.md`): `setExpenseCompletedAction` persisted a charge when convert returned null. Fixed: toggle aborts when status would change and convert is missing (`cannotApplyChargeToggle`). Independent Reviewer re-reviewed and **APPROVED**. Waiting for owner completion.
