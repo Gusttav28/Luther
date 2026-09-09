@@ -7,6 +7,8 @@ import {
 } from "@/lib/queries/overview";
 import { getScopeAmounts } from "@/lib/queries/waterfall-scope";
 import { getProjectsView, type ProjectsView } from "@/lib/queries/projects";
+import { getDerivedAccounts, type DerivedAccounts } from "@/lib/queries/accounts";
+import { getSettings } from "@/lib/queries/settings";
 
 export interface MomDelta {
   /** Percent change vs prior month; null when not computable. */
@@ -171,6 +173,7 @@ export interface OverviewDashboard {
   spentByCategory: SpentByCategoryResult;
   cashflow: CashflowPoint[];
   projectsView: ProjectsView;
+  accounts: DerivedAccounts;
 }
 
 /**
@@ -197,6 +200,7 @@ export async function getOverviewDashboard(
     priorH1Scope,
     priorH2Scope,
     projectsView,
+    settings,
   ] = await Promise.all([
     loadMonthSnapshot(userId, year, month),
     loadMonthSnapshot(userId, prior.year, prior.month),
@@ -208,7 +212,10 @@ export async function getOverviewDashboard(
     getScopeAmounts(userId, prior.year, prior.month, "H1", reporting, rates),
     getScopeAmounts(userId, prior.year, prior.month, "H2", reporting, rates),
     getProjectsView(userId, rates, new Date(), { skipMaterialize: true }),
+    getSettings(userId),
   ]);
+
+  const accounts = await getDerivedAccounts(userId, settings);
 
   const overview = figuresFromSnapshot(
     currentSnap,
@@ -231,5 +238,6 @@ export async function getOverviewDashboard(
     spentByCategory: spentByCategoryFromSnapshot(currentSnap, reporting, rates),
     cashflow: cashflowFromSnapshot(currentSnap, reporting, rates),
     projectsView,
+    accounts,
   };
 }

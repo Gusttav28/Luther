@@ -6,6 +6,8 @@ import { BreakdownTabs } from "@/components/overview/breakdown-tabs";
 import { HalfMonthSchedule } from "@/components/overview/half-month-schedule";
 import { ProjectsProgress } from "@/components/overview/projects-progress";
 import { OverviewRefresh } from "@/components/overview/overview-refresh";
+import { AccountCards } from "@/components/overview/account-cards";
+import type { DerivedAccounts } from "@/lib/queries/accounts";
 import { monthName, type HalfPeriod } from "@/lib/periods";
 import type { Currency } from "@/lib/money";
 import type { OverviewFigures } from "@/lib/queries/overview";
@@ -28,6 +30,7 @@ export function MobileOverview({
   overview,
   highlightPeriod,
   projects,
+  accounts,
 }: {
   year: number;
   month: number;
@@ -40,6 +43,7 @@ export function MobileOverview({
   overview: OverviewFigures;
   highlightPeriod: HalfPeriod | null;
   projects: ProjectView[];
+  accounts: DerivedAccounts;
 }) {
   return (
     <div className="space-y-[18px] md:hidden">
@@ -53,6 +57,14 @@ export function MobileOverview({
           <OverviewRefresh year={year} month={month} variant="icon" />
         </div>
       </header>
+
+      <AccountCards
+        compact
+        mainAccountMinor={accounts.mainAccountMinor}
+        savingsAccountMinor={accounts.savingsAccountMinor}
+        savedFromPlannedMinor={overview.savedFromPlannedMinor}
+        currency={currency}
+      />
 
       <KpiCardsMobile items={kpis} currency={currency} mom={mom} />
 

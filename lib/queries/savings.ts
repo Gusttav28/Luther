@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
 import { materializeMonthWaterfall } from "@/lib/queries/waterfall-scope";
-import { computeWaterfall } from "@/lib/waterfall";
-import { getScopeAmounts } from "@/lib/queries/waterfall-scope";
+import { getScopeAmounts, plannedTakeFromScope, waterfallFromScope } from "@/lib/queries/waterfall-scope";
 import { getLifetimeSavingsBalance } from "@/lib/queries/overview";
 
 export interface SavingsRow {
@@ -21,6 +20,7 @@ export interface SavingsSummary {
   leftoverMinor: number | null;
   lifetimeTakeMinor: number | null;
   postLifetimeMinor: number | null;
+  plannedSalaryTakeMinor: number | null;
 }
 
 export async function getSavings(
@@ -58,6 +58,7 @@ export async function getSavings(
   let leftoverMinor: number | null = null;
   let lifetimeTakeMinor: number | null = null;
   let postLifetimeMinor: number | null = null;
+  let plannedSalaryTakeMinorValue: number | null = null;
 
   if (monthRef) {
     const inMonth = contributions.filter(
@@ -77,15 +78,13 @@ export async function getSavings(
       reporting,
       rates
     );
-    if (scope.plannedIncomeMinor !== null && scope.expensesMinor !== null) {
-      const wf = computeWaterfall({
-        plannedIncomeMinor: scope.plannedIncomeMinor,
-        expensesMinor: scope.expensesMinor,
-      });
+    const wf = waterfallFromScope(scope);
+    if (wf) {
       leftoverMinor = wf.leftoverMinor;
       lifetimeTakeMinor = wf.lifetimeTakeMinor;
       postLifetimeMinor = wf.postLifetimeMinor;
     }
+    plannedSalaryTakeMinorValue = plannedTakeFromScope(scope);
   }
 
   return {
@@ -95,6 +94,7 @@ export async function getSavings(
     leftoverMinor,
     lifetimeTakeMinor,
     postLifetimeMinor,
+    plannedSalaryTakeMinor: plannedSalaryTakeMinorValue,
   };
 }
 

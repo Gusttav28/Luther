@@ -72,6 +72,7 @@ export default async function SavingsPage() {
         leftoverMinor={data.leftoverMinor}
         lifetimeTakeMinor={data.lifetimeTakeMinor}
         postLifetimeMinor={data.postLifetimeMinor}
+        plannedSalaryTakeMinor={data.plannedSalaryTakeMinor}
         savingsTrend={savingsTrend}
         contributionsTotal={contributionsTotal}
         withdrawalsTotal={withdrawalsTotal}
@@ -87,7 +88,7 @@ export default async function SavingsPage() {
           <RatesNote usdToCrc={settings.rates.usdToCrc} />
         </div>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Savings summary">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5" aria-label="Savings summary">
           <div className="card">
             <p className="field-label">Lifetime balance</p>
             <p className="text-2xl font-bold tabular-nums text-ink">
@@ -112,12 +113,20 @@ export default async function SavingsPage() {
               <Money minor={data.postLifetimeMinor} currency={settings.reportingCurrency} />
             </p>
           </div>
+          <div className="card">
+            <p className="field-label">From planned salary</p>
+            <p className="text-2xl font-bold tabular-nums text-ink">
+              <Money minor={data.plannedSalaryTakeMinor} currency={settings.reportingCurrency} />
+            </p>
+          </div>
         </section>
 
         <p className="text-sm text-ink-muted">
           Lifetime savings are always <strong className="font-semibold text-ink">70%</strong> of
-          what remains after expenses from your planned income. Use the form below only for manual
-          adjustments or withdrawals.
+          what remains after charged and upcoming (Planning) bills from salary you have already
+          received. <strong className="font-semibold text-ink">From planned salary</strong> is the
+          extra take if planned pay arrives — it updates when you receive salary or something is
+          charged. Use the form below only for manual adjustments or withdrawals.
         </p>
 
         <section className="grid min-w-0 gap-4 md:grid-cols-2" aria-label="Savings analytics">

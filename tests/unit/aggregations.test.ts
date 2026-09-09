@@ -168,8 +168,9 @@ describe("monthly overview (R7, R12)", () => {
     const o = await getOverview(userId, 2026, 7, "CRC", RATES);
     expect(o.earned).toBe(62500000);
     expect(o.spent).toBe(7500000);
-    expect(o.saved).toBe(300000);
-    expect(o.remaining).toBe(62500000 - 7500000 - 300000);
+    expect(o.saved).toBe(38_500_000);
+    expect(o.remaining).toBe(62_500_000 - 7_500_000 - 38_500_000);
+    expect(o.savedFromPlannedMinor).toBe(349_965_000);
     expect(o.lifetimeSavingsBalance).toBe(1300000);
     expect(o.perPeriod.H1.earned).toBe(50000000);
     expect(o.perPeriod.H2.earned).toBe(12500000);

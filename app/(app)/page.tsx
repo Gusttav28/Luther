@@ -11,6 +11,7 @@ import { HalfMonthSchedule } from "@/components/overview/half-month-schedule";
 import { ProjectsProgress } from "@/components/overview/projects-progress";
 import { OverviewRefresh } from "@/components/overview/overview-refresh";
 import { MobileOverview } from "@/components/overview/mobile-overview";
+import { AccountCards } from "@/components/overview/account-cards";
 import { currentPeriod, monthName, type HalfPeriod } from "@/lib/periods";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export default async function OverviewPage({
   const month = Number(params.month) || now.getMonth() + 1;
 
   const settings = await getSettings(userId);
-  const { overview, priorOverview, spentByCategory, cashflow, projectsView } =
+  const { overview, priorOverview, spentByCategory, cashflow, projectsView, accounts } =
     await getOverviewDashboard(
       userId,
       year,
@@ -48,11 +49,6 @@ export default async function OverviewPage({
     { key: "spent" as const, label: "Spent", value: overview.spent },
     { key: "saved" as const, label: "Saved", value: overview.saved },
     { key: "remaining" as const, label: "Remaining", value: overview.remaining },
-    {
-      key: "lifetime" as const,
-      label: "Lifetime savings",
-      value: overview.lifetimeSavingsBalance,
-    },
   ];
 
   return (
@@ -69,6 +65,7 @@ export default async function OverviewPage({
         overview={overview}
         highlightPeriod={highlightPeriod}
         projects={projectsView.projects}
+        accounts={accounts}
       />
 
       <div className="hidden space-y-6 md:block">
@@ -84,6 +81,13 @@ export default async function OverviewPage({
             <OverviewRefresh year={year} month={month} />
           </div>
         </div>
+
+        <AccountCards
+          mainAccountMinor={accounts.mainAccountMinor}
+          savingsAccountMinor={accounts.savingsAccountMinor}
+          savedFromPlannedMinor={overview.savedFromPlannedMinor}
+          currency={settings.reportingCurrency}
+        />
 
         <KpiCards items={kpis} currency={settings.reportingCurrency} mom={mom} />
 

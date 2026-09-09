@@ -4,7 +4,7 @@
 - Outcome: Show Main vs Savings accounts on Overview; compute the 70% lifetime take only from salary already received, after reserving unpaid (Planning) bills; do not treat planned/unreceived income as already saved
 - Branch: cursor/received-savings-accounts-ef43
 - Status: Specification
-- Spec version: 2026-09-09
+- Spec version: 2026-09-09 (owner GO 2026-09-09; R11 added same day)
 
 ## Problem
 
@@ -176,6 +176,25 @@ The owner needs two derived accounts on Overview — **Main account** (cash curr
 - Failure behavior: Unchanged income validation.
 - Acceptance evidence: Code review: no Prisma schema change; income forms still have the planned checkbox; waterfall queries do not read `planned: true` as income.
 
+### R11 — Show the savings amount that still comes from planned salary
+
+- Trigger: Owner views Overview (and Savings leftover figures) after planned income, received income, or charged/Planning expenses change.
+- Preconditions: R1–R4. Planned income may exist in the same month/half. Actual lifetime take still uses received only (R1–R3). Planned take is display-only and is not written to `SavingsContribution` / Savings account.
+- Actor/system: Scope loaders + leftover math + Overview (and Savings) UI.
+- Expected response: Show the exact extra lifetime take that would be added if planned salary were received, using the same leftover rule:
+
+  ```
+  actualTake    = 70% of max(0, received − charged − planning)
+  combinedTake  = 70% of max(0, received + plannedSalary − charged − planning)
+  fromPlanned   = combinedTake − actualTake
+  ```
+
+  Label: **From planned salary**. This figure updates whenever received salary is added/unmarked planned, planned salary is added/edited, or charged/Planning expenses change (leftover shrinks or grows). It is not added into Main or Savings. Savings account still only moves from received leftover (R5/R6).
+- State change: None (derived display).
+- Visible/resulting evidence: Overview shows **From planned salary** next to the account pair (desktop and mobile). A planned-only month can show a positive From planned salary while Saved / Savings account take stay 0. Charging an expense reduces From planned salary when combined leftover shrinks. Receiving a planned row (uncheck Planned) moves that take from From planned salary into the actual Saved take.
+- Failure behavior: Missing FX → From planned salary `null` / “—”. Empty planned salary → `0`.
+- Acceptance evidence: Unit test: received 100, planned 50, charged 20, planning 0 → actual take 56, combined take 91, from planned 35 (minor-unit scale as in tests; floor). Manual: add planned salary → From planned salary appears; charge a bill → it drops; uncheck Planned → Saved rises and From planned salary falls.
+
 ### R10 — Security, privacy, and dependencies
 
 - Trigger: Any Overview / Savings / Projects / Balance / materialize / account derivation in this item.
@@ -205,6 +224,7 @@ The owner needs two derived accounts on Overview — **Main account** (cash curr
 | Keep income planned checkbox; no new income flag | R9 |
 | Unit tests for leftover / gate / 70% | R2, R3 |
 | Auth / privacy / no secrets / no new deps | R10 |
+| Show exact amount still coming from planned salary; updates on new salary or charges | R11 |
 
 ## Assumptions
 
@@ -216,6 +236,7 @@ The owner needs two derived accounts on Overview — **Main account** (cash curr
 - Empty received income is `0`, not “use planned.” Empty Planning is `0`.
 - Light Savings explainer copy is in scope so it no longer says leftover comes from planned income. Income and expense create UX are unchanged.
 - No new Prisma models and no new npm packages.
+- **From planned salary** is a forecast of extra 70% leftover take if planned pay arrives. It does not land in Savings until the income is received.
 
 ## Open questions
 

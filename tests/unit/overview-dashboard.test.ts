@@ -15,6 +15,9 @@ const base: OverviewFigures = {
     H2: { earned: 50_00, spent: 20_00, saved: 5_00 },
   },
   lifetimeSavingsBalance: 500_00,
+  leftoverMinor: 60_00,
+  postLifetimeMinor: 18_00,
+  savedFromPlannedMinor: 0,
 };
 
 describe("overview-dashboard helpers (R4)", () => {

@@ -1,14 +1,37 @@
 import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
 import { periodDateRange, type HalfPeriod, type PeriodRef } from "@/lib/periods";
-import { computeWaterfall, type PeriodMode } from "@/lib/waterfall";
+import {
+  computeWaterfall,
+  plannedSalaryTakeMinor,
+  type PeriodMode,
+  type WaterfallResult,
+} from "@/lib/waterfall";
 
 export interface ScopeAmounts {
-  plannedIncomeMinor: number | null;
-  expensesMinor: number | null;
+  receivedIncomeMinor: number | null;
+  plannedSalaryMinor: number | null;
+  chargedExpensesMinor: number | null;
+  planningExpensesMinor: number | null;
 }
 
-/** Prefer planned income; fall back to actual if no planned rows. */
+function incomePeriods(period: HalfPeriod | "BOTH"): HalfPeriod[] {
+  return period === "BOTH" ? ["H1", "H2"] : [period];
+}
+
+function expenseDateFilter(
+  year: number,
+  month: number,
+  period: HalfPeriod | "BOTH"
+): { gte: Date; lt?: Date; lte?: Date } {
+  if (period === "BOTH") {
+    return { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) };
+  }
+  const { start, end } = periodDateRange({ year, month, period });
+  return { gte: start, lte: end };
+}
+
+/** Received income only (`planned === false`). No planned-first fallback. */
 export async function incomeForScope(
   userId: string,
   year: number,
@@ -17,16 +40,39 @@ export async function incomeForScope(
   reporting: Currency,
   rates: Rates
 ): Promise<number | null> {
-  const periods = period === "BOTH" ? (["H1", "H2"] as const) : ([period] as const);
-  const planned = await prisma.incomeEntry.findMany({
-    where: { userId, year, month, planned: true, period: { in: [...periods] } },
+  const rows = await prisma.incomeEntry.findMany({
+    where: {
+      userId,
+      year,
+      month,
+      planned: false,
+      period: { in: incomePeriods(period) },
+    },
   });
-  const rows =
-    planned.length > 0
-      ? planned
-      : await prisma.incomeEntry.findMany({
-          where: { userId, year, month, planned: false, period: { in: [...periods] } },
-        });
+  return sumInCurrency(
+    rows.map((r) => ({ amountMinor: r.amountMinor, currency: r.currency as Currency })),
+    reporting,
+    rates
+  );
+}
+
+async function plannedSalaryForScope(
+  userId: string,
+  year: number,
+  month: number,
+  period: HalfPeriod | "BOTH",
+  reporting: Currency,
+  rates: Rates
+): Promise<number | null> {
+  const rows = await prisma.incomeEntry.findMany({
+    where: {
+      userId,
+      year,
+      month,
+      planned: true,
+      period: { in: incomePeriods(period) },
+    },
+  });
   return sumInCurrency(
     rows.map((r) => ({ amountMinor: r.amountMinor, currency: r.currency as Currency })),
     reporting,
@@ -42,22 +88,29 @@ export async function expensesForScope(
   reporting: Currency,
   rates: Rates
 ): Promise<number | null> {
-  if (period === "BOTH") {
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 1);
-    const rows = await prisma.expense.findMany({
-      where: { userId, completed: true, date: { gte: start, lt: end } },
-      select: { amountMinor: true, currency: true },
-    });
-    return sumInCurrency(
-      rows.map((r) => ({ amountMinor: r.amountMinor, currency: r.currency as Currency })),
-      reporting,
-      rates
-    );
-  }
-  const { start, end } = periodDateRange({ year, month, period });
+  const date = expenseDateFilter(year, month, period);
   const rows = await prisma.expense.findMany({
-    where: { userId, completed: true, date: { gte: start, lte: end } },
+    where: { userId, completed: true, date },
+    select: { amountMinor: true, currency: true },
+  });
+  return sumInCurrency(
+    rows.map((r) => ({ amountMinor: r.amountMinor, currency: r.currency as Currency })),
+    reporting,
+    rates
+  );
+}
+
+async function planningExpensesForScope(
+  userId: string,
+  year: number,
+  month: number,
+  period: HalfPeriod | "BOTH",
+  reporting: Currency,
+  rates: Rates
+): Promise<number | null> {
+  const date = expenseDateFilter(year, month, period);
+  const rows = await prisma.expense.findMany({
+    where: { userId, completed: false, date },
     select: { amountMinor: true, currency: true },
   });
   return sumInCurrency(
@@ -75,11 +128,55 @@ export async function getScopeAmounts(
   reporting: Currency,
   rates: Rates
 ): Promise<ScopeAmounts> {
-  const [plannedIncomeMinor, expensesMinor] = await Promise.all([
-    incomeForScope(userId, year, month, period, reporting, rates),
-    expensesForScope(userId, year, month, period, reporting, rates),
-  ]);
-  return { plannedIncomeMinor, expensesMinor };
+  const [receivedIncomeMinor, plannedSalaryMinor, chargedExpensesMinor, planningExpensesMinor] =
+    await Promise.all([
+      incomeForScope(userId, year, month, period, reporting, rates),
+      plannedSalaryForScope(userId, year, month, period, reporting, rates),
+      expensesForScope(userId, year, month, period, reporting, rates),
+      planningExpensesForScope(userId, year, month, period, reporting, rates),
+    ]);
+  return {
+    receivedIncomeMinor,
+    plannedSalaryMinor,
+    chargedExpensesMinor,
+    planningExpensesMinor,
+  };
+}
+
+export function waterfallFromScope(
+  scope: ScopeAmounts,
+  projectAllocationPercent?: number
+): WaterfallResult | null {
+  if (
+    scope.receivedIncomeMinor === null ||
+    scope.chargedExpensesMinor === null ||
+    scope.planningExpensesMinor === null
+  ) {
+    return null;
+  }
+  return computeWaterfall({
+    receivedIncomeMinor: scope.receivedIncomeMinor,
+    chargedExpensesMinor: scope.chargedExpensesMinor,
+    planningExpensesMinor: scope.planningExpensesMinor,
+    projectAllocationPercent,
+  });
+}
+
+export function plannedTakeFromScope(scope: ScopeAmounts): number | null {
+  if (
+    scope.receivedIncomeMinor === null ||
+    scope.plannedSalaryMinor === null ||
+    scope.chargedExpensesMinor === null ||
+    scope.planningExpensesMinor === null
+  ) {
+    return null;
+  }
+  return plannedSalaryTakeMinor({
+    receivedIncomeMinor: scope.receivedIncomeMinor,
+    plannedSalaryMinor: scope.plannedSalaryMinor,
+    chargedExpensesMinor: scope.chargedExpensesMinor,
+    planningExpensesMinor: scope.planningExpensesMinor,
+  });
 }
 
 function midDate(ref: PeriodRef): Date {
@@ -117,13 +214,8 @@ export async function materializeHalfWaterfall(
         }),
   ]);
 
-  if (scope.plannedIncomeMinor === null || scope.expensesMinor === null) return;
-
-  const waterfall = computeWaterfall({
-    plannedIncomeMinor: scope.plannedIncomeMinor,
-    expensesMinor: scope.expensesMinor,
-    projectAllocationPercent: resolvedPriority?.allocationPercent,
-  });
+  const waterfall = waterfallFromScope(scope, resolvedPriority?.allocationPercent);
+  if (!waterfall) return;
 
   const date = midDate(ref);
 
@@ -143,7 +235,7 @@ export async function materializeHalfWaterfall(
         date,
         amountMinor: waterfall.lifetimeTakeMinor,
         currency: reporting,
-        note: "Lifetime savings (70% of leftover after expenses)",
+        note: "Lifetime savings (70% of leftover after received salary and reserved bills)",
         source: "waterfall",
         year: ref.year,
         month: ref.month,

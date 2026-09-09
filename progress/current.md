@@ -1,48 +1,63 @@
 # Current implementation progress
 
-- Work item: expense-create-status (`specs/expense-create-status/`)
-- Branch: `cursor/expense-create-status-ef43`
-- Spec package: 2026-09-07, human-approved (owner **GO** on 2026-09-07)
-- Implementer session: 2026-09-07
+- Work item: received-savings-accounts (`specs/received-savings-accounts/`)
+- Branch: `cursor/received-savings-accounts-ef43`
+- Spec package: 2026-09-09, human-approved (owner **GO** on 2026-09-09; R11 planned-salary display same day)
+- Implementer session: 2026-09-09
 - Handoff: **IMPLEMENTED**
 
 ## Files read
 
 - `AGENTS.md`, `.agents/implementer.md`
-- `specs/expense-create-status/{requirements,design,tasks}.md` (complete)
-- Existing expense create action, `expenseSchema`, AddExpenseForm sheet/card, ExpenseListRow, income period toggle pattern
+- `specs/received-savings-accounts/{requirements,design,tasks}.md` (complete, including R11)
+- Waterfall, waterfall-scope, overview, savings, projects, balance, KPI/overview UI, savings copy
 
 ## Files changed
 
-### T1 — Parse and validate create-time `completed`
+### T1 — Leftover math
 
-- `lib/validation.ts` — `completedCreateSchema` + `parseCompletedCreate` (missing/empty → false; `"true"`/`"false"` only; not on `expenseSchema`)
-- `tests/unit/validation.test.ts` — default Planning, true/false mapping, reject invalid; expense schema still omits `completed`
+- `lib/waterfall.ts` — received / charged / planning leftover; 70% of leftover; `plannedSalaryTakeMinor`
+- `tests/unit/waterfall.test.ts` — reserve gate, not-gross-salary, from-planned subtract
 
-### T2 — Persist chosen flag on create
+### T2 — Scope loaders
 
-- `app/(app)/expenses/actions.ts` — `createExpenseAction` writes parsed `completed`; `copyExpensesMonthAction` still `completed: false`; `updateExpenseAction` still does not write `completed`; `setExpenseCompletedAction` unchanged
+- `lib/queries/waterfall-scope.ts` — received-only income; planning expenses; `waterfallFromScope` / `plannedTakeFromScope`; materialize uses new leftover
 
-### T3 — Two-option control on Add expense
+### T3 — Query consumers
 
-- `app/(app)/expenses/expense-forms.tsx` — `ExpenseStatusControl` on sheet and card; default Planning; hidden `completed` `"false"`/`"true"`
+- `lib/queries/overview.ts`, `savings.ts`, `projects.ts` — new scope fields
 
-### T4 — List/row copy
+### T4 — Derived accounts
 
-- `app/(app)/expenses/expense-forms.tsx` — `ExpenseListRow` labels: Planning / Already charged (badge, desktop meta, desktop button, mobile ⋮). Toggle still `setExpenseCompletedAction`. Edit form unchanged.
+- `lib/queries/accounts.ts` — Main = Total cash − Savings; Total cash from `getBalanceSeries`
+- `lib/queries/overview-dashboard.ts` — returns `accounts`
 
-### T5 — Handoff
+### T5 — Overview UI
 
-- `progress/current.md` — this file
+- `components/overview/account-cards.tsx` — Main, Savings, From planned salary
+- `app/(app)/page.tsx`, `components/overview/mobile-overview.tsx`, `kpi-cards.tsx` — accounts row; lifetime KPI removed
+
+### T6 — Savings copy
+
+- `app/(app)/savings/page.tsx`, `components/savings/mobile-savings.tsx` — received + reserved bills + From planned salary
+
+### T7 / T8
+
+- `tests/unit/aggregations.test.ts` — July Saved = 70% of received leftover; planned seed excluded
+- `tests/unit/overview-dashboard.test.ts` — fixture fields for new OverviewFigures
+- R11 wired on Overview + Savings
+
+### T9 — this file
 
 ## Verification
 
-- TV4: `npx vitest run tests/unit/validation.test.ts` — 21 passed when run without Prisma globalSetup (this environment has no Postgres). The default vitest config `tests/global-setup.ts` requires `DATABASE_URL` / `DIRECT_URL` and cannot `prisma db push` here.
-- TV1–TV3: require a running app + owner session; not executed in this environment (no `.env` / database). Owner should confirm on `/expenses`.
-- TV5: `requireUserId` retained on create; `copyExpensesMonthAction` still `completed: false`; spent queries still `completed: true`; `package.json` dependencies unchanged; no schema change.
+- TV1: `npx vitest run tests/unit/waterfall.test.ts --config vitest.waterfall.config.ts` (run after this handoff)
+- TV2: aggregations need Postgres (`tests/global-setup.ts`); not run if DATABASE_URL missing
+- TV3–TV5: owner/browser on a live session
+- TV6: no new deps; no schema change; `balance.ts` math unchanged
 
 ## Notes for Reviewer
 
-- Reuses `Expense.completed`; no schema change
-- Sheet host `components/add-expense-sheet.tsx` unchanged
-- Visual row highlight (opacity / brand) unchanged; copy only
+- Actual Savings account / materialized take uses received leftover only
+- **From planned salary** is display-only (`combinedTake − actualTake`)
+- Main + Savings = Balance current balance

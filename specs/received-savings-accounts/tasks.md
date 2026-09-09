@@ -44,10 +44,16 @@
   - Preconditions: T3
   - Expected evidence: Overview Saved/remaining (and any leftover assertions) match received − charged − planning leftover and 70% take. Planned seed income does not inflate Saved. Skip this task only if those tests already match without edits (document in the handoff).
 
-- [ ] T8 — Record handoff in progress log
+- [ ] T8 — From planned salary display
+  - Files: `lib/waterfall.ts` (helper), `lib/queries/waterfall-scope.ts`, `lib/queries/overview.ts`, `components/overview/account-cards.tsx`, `app/(app)/page.tsx`, `components/overview/mobile-overview.tsx`, `lib/queries/savings.ts`, `app/(app)/savings/page.tsx`, `components/savings/mobile-savings.tsx`, `tests/unit/waterfall.test.ts`
+  - Requirements: R11
+  - Preconditions: T1, T2, T5
+  - Expected evidence: `fromPlanned = combinedTake − actualTake`. Overview shows **From planned salary**. Figure is not materialized into Savings. Unit case covers the subtract formula.
+
+- [ ] T9 — Record handoff in progress log
   - Files: `progress/current.md`
   - Requirements: — (process)
-  - Preconditions: T1–T7 done (T7 N/A documented if skipped)
+  - Preconditions: T1–T8 done (T7 N/A documented if skipped)
   - Expected evidence: Handoff `IMPLEMENTED` for `received-savings-accounts`
 
 ## Verification
@@ -89,7 +95,8 @@
 | T5 | R6, R7 |
 | T6 | R4 |
 | T7 | R1, R4 |
-| T8 | — |
+| T8 | R11 |
+| T9 | — |
 | TV1 | R1, R2, R3 |
 | TV2 | R1, R4 |
 | TV3 | R1, R4, R5, R9 |

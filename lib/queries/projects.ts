@@ -8,8 +8,8 @@ import {
 } from "@/lib/money";
 import { currentPeriod, nextPeriod, type PeriodRef } from "@/lib/periods";
 import { projectAffordability } from "@/lib/projections";
-import { computeWaterfall, type PeriodMode } from "@/lib/waterfall";
-import { getScopeAmounts, materializeMonthWaterfall } from "@/lib/queries/waterfall-scope";
+import { type PeriodMode } from "@/lib/waterfall";
+import { getScopeAmounts, materializeMonthWaterfall, waterfallFromScope } from "@/lib/queries/waterfall-scope";
 import { getSettings } from "@/lib/queries/settings";
 
 export interface ProjectView {
@@ -65,22 +65,12 @@ export async function getProjectsView(
     getScopeAmounts(userId, year, month, "BOTH", settings.reportingCurrency, rates),
   ]);
 
-  const monthWaterfall =
-    monthScope.plannedIncomeMinor !== null && monthScope.expensesMinor !== null
-      ? computeWaterfall({
-          plannedIncomeMinor: monthScope.plannedIncomeMinor,
-          expensesMinor: monthScope.expensesMinor,
-        })
-      : null;
+  const monthWaterfall = waterfallFromScope(monthScope);
 
   const priority = projects.find((p) => p.isPriority && !p.completedAt);
   const allocationPerPeriod =
     priority && monthWaterfall
-      ? computeWaterfall({
-          plannedIncomeMinor: monthScope.plannedIncomeMinor!,
-          expensesMinor: monthScope.expensesMinor!,
-          projectAllocationPercent: priority.allocationPercent,
-        }).projectTakeMinor
+      ? waterfallFromScope(monthScope, priority.allocationPercent)?.projectTakeMinor ?? 0
       : 0;
   // BOTH mode: treat monthly take as ~2 halves for projection step size
   const perHalf =
@@ -139,11 +129,7 @@ export async function getProjectsView(
     const affordableNow = fundedPercent !== null && saved !== null && saved >= project.costMinor;
     const expectedTakeMinor =
       project.isPriority && monthWaterfall
-        ? computeWaterfall({
-            plannedIncomeMinor: monthScope.plannedIncomeMinor!,
-            expensesMinor: monthScope.expensesMinor!,
-            projectAllocationPercent: project.allocationPercent,
-          }).projectTakeMinor
+        ? waterfallFromScope(monthScope, project.allocationPercent)?.projectTakeMinor ?? null
         : null;
     return {
       id: project.id,

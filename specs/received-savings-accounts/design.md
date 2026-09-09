@@ -40,10 +40,10 @@
 | `lib/queries/accounts.ts` (new) **or** a helper next to `getLifetimeSavingsBalance` | `getDerivedAccounts(userId, settings)`: Savings = lifetime balance; Total cash via starting + all received − all charged (reuse Balance filters or `getBalanceSeries().currentBalance`); Main = Total cash − Savings. All `userId`-scoped. | R6, R8, R10 |
 | `lib/queries/savings.ts` | Call `computeWaterfall` with the new scope fields. | R4 |
 | `lib/queries/projects.ts` | Same field/input update for month leftover, expected take, projections. | R4 |
-| `app/(app)/page.tsx` | Render account pair; drop Lifetime savings from the monthly KPI list; pass accounts into `MobileOverview`. | R7, R6 |
+| `app/(app)/page.tsx` | Render account pair + From planned salary; drop Lifetime savings from the monthly KPI list; pass accounts into `MobileOverview`. | R7, R6, R11 |
 | `components/overview/mobile-overview.tsx` | Render the same account pair + optional hint on `md:hidden`. | R7 |
 | `components/overview/kpi-cards.tsx` | Stop requiring a `lifetime` KPI on mobile (remove footer when no lifetime item). Keep monthly Earned/Spent/Saved/Remaining. | R7 |
-| `components/overview/account-cards.tsx` (new) | Desktop + mobile presentation: **Main account**, **Savings account**, optional one-line hint. Reuse `Money` and existing card classes. | R7 |
+| `components/overview/account-cards.tsx` (new) | Desktop + mobile presentation: **Main account**, **Savings account**, **From planned salary**, optional one-line hint. Reuse `Money` and existing card classes. | R7, R11 |
 | `app/(app)/savings/page.tsx` | Replace “planned income” explainer with received salary + reserved bills wording. Figures already come from `getSavings`. | R4 |
 | `components/savings/mobile-savings.tsx` | Same explainer update. | R4 |
 | `tests/unit/waterfall.test.ts` | Leftover = received − charged − planning; ≤ 0 gate; 70% of leftover not gross; existing floor / project-cap cases updated to new input names. | R2, R3 |
@@ -227,3 +227,4 @@ No new npm dependencies. No new Prisma models or migrations. Reuse `IncomeEntry.
 | R8 | Balance files unchanged; identity Main + Savings = `currentBalance` |
 | R9 | Income forms untouched; waterfall does not read `planned: true` as income |
 | R10 | `userId` / `requireUserId`; no schema; no new deps; no secrets |
+| R11 | `plannedSalaryMinor` on scope; `fromPlanned = combinedTake − actualTake`; Overview account cards |
