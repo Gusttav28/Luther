@@ -2,41 +2,48 @@ import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency } from "@/lib/money";
 import { getBalanceSeries } from "@/lib/queries/balance";
 import { getLifetimeSavingsBalance } from "@/lib/queries/overview";
-import {
-  getScopeAmounts,
-  plannedTakeFromScope,
-  waterfallFromScope,
-} from "@/lib/queries/waterfall-scope";
+import { getScopeAmounts, waterfallFromScope } from "@/lib/queries/waterfall-scope";
 import { savingsMonthBreakdownFromTakes } from "@/lib/waterfall";
 import type { AppSettings } from "@/lib/queries/settings";
 
 export interface DerivedAccounts {
-  /** starting + received − charged − Savings. */
+  /** Stored Main opening (Settings starting if no MAIN row), reporting currency. */
   mainAccountMinor: number | null;
-  /** Lifetime savings balance. */
+  /** This month’s 70% leftover take. */
   savingsAccountMinor: number | null;
+  /** This month’s remaining Planning expenses. */
+  plannedExpensesMinor: number | null;
   /** starting + received − charged (= Balance currentBalance). */
   totalCashMinor: number | null;
 }
 
 /**
- * Derived Main / Savings / Total cash. Overview snapshot — lifetime only, no
- * Account.opening. Identity when rates exist: Main + Savings = Balance currentBalance.
+ * Overview account cards: typed Main, month take, remaining Planning.
  */
 export async function getDerivedAccounts(
   userId: string,
-  settings: AppSettings
+  settings: AppSettings,
+  year: number,
+  month: number
 ): Promise<DerivedAccounts> {
-  const [series, savingsAccountMinor] = await Promise.all([
+  const [series, scope] = await Promise.all([
     getBalanceSeries(userId, settings),
-    getLifetimeSavingsBalance(userId, settings.reportingCurrency, settings.rates),
+    getScopeAmounts(
+      userId,
+      year,
+      month,
+      "BOTH",
+      settings.reportingCurrency,
+      settings.rates
+    ),
   ]);
-  const totalCashMinor = series.currentBalance;
-  const mainAccountMinor =
-    totalCashMinor === null || savingsAccountMinor === null
-      ? null
-      : totalCashMinor - savingsAccountMinor;
-  return { mainAccountMinor, savingsAccountMinor, totalCashMinor };
+  const wf = waterfallFromScope(scope);
+  return {
+    mainAccountMinor: scope.mainCashMinor,
+    savingsAccountMinor: wf?.lifetimeTakeMinor ?? null,
+    plannedExpensesMinor: scope.planningExpensesMinor,
+    totalCashMinor: series.currentBalance,
+  };
 }
 
 export type AccountKind = "MAIN" | "SAVINGS" | "CUSTOM";
@@ -145,9 +152,8 @@ export async function getCurrentMonthBreakdown(
   );
   const wf = waterfallFromScope(scope);
   const fromMain = wf?.lifetimeTakeMinor ?? null;
-  const fromPlanned = plannedTakeFromScope(scope);
   return {
-    breakdown: savingsMonthBreakdownFromTakes(fromMain, fromPlanned),
+    breakdown: savingsMonthBreakdownFromTakes(fromMain, 0),
     leftoverHintMinor: wf?.postLifetimeMinor ?? null,
   };
 }

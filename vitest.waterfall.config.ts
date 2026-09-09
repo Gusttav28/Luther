@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       "tests/unit/waterfall.test.ts",
       "tests/unit/account-breakdown.test.ts",
+      "tests/unit/main-cash.test.ts",
       "tests/unit/validation.test.ts",
     ],
     environment: "node",

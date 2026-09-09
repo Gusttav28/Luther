@@ -62,7 +62,7 @@ export function MobileOverview({
         compact
         mainAccountMinor={accounts.mainAccountMinor}
         savingsAccountMinor={accounts.savingsAccountMinor}
-        savedFromPlannedMinor={overview.savedFromPlannedMinor}
+        plannedExpensesMinor={accounts.plannedExpensesMinor}
         currency={currency}
       />
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency, type Rates } from "@/lib/money";
 import { periodDateRange, type HalfPeriod, type PeriodRef } from "@/lib/periods";
+import { loadMainCashStore } from "@/lib/queries/main-cash";
 import {
   computeWaterfall,
   plannedSalaryTakeMinor,
@@ -13,6 +14,8 @@ export interface ScopeAmounts {
   plannedSalaryMinor: number | null;
   chargedExpensesMinor: number | null;
   planningExpensesMinor: number | null;
+  /** Stored Main opening converted to reporting currency. */
+  mainCashMinor: number | null;
 }
 
 function incomePeriods(period: HalfPeriod | "BOTH"): HalfPeriod[] {
@@ -120,6 +123,19 @@ async function planningExpensesForScope(
   );
 }
 
+export async function getMainCashMinor(
+  userId: string,
+  reporting: Currency,
+  rates: Rates
+): Promise<number | null> {
+  const store = await loadMainCashStore(userId);
+  return sumInCurrency(
+    [{ amountMinor: store.openingMinor, currency: store.currency }],
+    reporting,
+    rates
+  );
+}
+
 export async function getScopeAmounts(
   userId: string,
   year: number,
@@ -128,18 +144,25 @@ export async function getScopeAmounts(
   reporting: Currency,
   rates: Rates
 ): Promise<ScopeAmounts> {
-  const [receivedIncomeMinor, plannedSalaryMinor, chargedExpensesMinor, planningExpensesMinor] =
-    await Promise.all([
-      incomeForScope(userId, year, month, period, reporting, rates),
-      plannedSalaryForScope(userId, year, month, period, reporting, rates),
-      expensesForScope(userId, year, month, period, reporting, rates),
-      planningExpensesForScope(userId, year, month, period, reporting, rates),
-    ]);
+  const [
+    receivedIncomeMinor,
+    plannedSalaryMinor,
+    chargedExpensesMinor,
+    planningExpensesMinor,
+    mainCashMinor,
+  ] = await Promise.all([
+    incomeForScope(userId, year, month, period, reporting, rates),
+    plannedSalaryForScope(userId, year, month, period, reporting, rates),
+    expensesForScope(userId, year, month, period, reporting, rates),
+    planningExpensesForScope(userId, year, month, period, reporting, rates),
+    getMainCashMinor(userId, reporting, rates),
+  ]);
   return {
     receivedIncomeMinor,
     plannedSalaryMinor,
     chargedExpensesMinor,
     planningExpensesMinor,
+    mainCashMinor,
   };
 }
 
@@ -147,17 +170,12 @@ export function waterfallFromScope(
   scope: ScopeAmounts,
   projectAllocationPercent?: number
 ): WaterfallResult | null {
-  if (
-    scope.receivedIncomeMinor === null ||
-    scope.chargedExpensesMinor === null ||
-    scope.planningExpensesMinor === null
-  ) {
+  if (scope.mainCashMinor === null || scope.planningExpensesMinor === null) {
     return null;
   }
   return computeWaterfall({
-    receivedIncomeMinor: scope.receivedIncomeMinor,
-    chargedExpensesMinor: scope.chargedExpensesMinor,
-    planningExpensesMinor: scope.planningExpensesMinor,
+    mainCashMinor: scope.mainCashMinor,
+    remainingPlanningMinor: scope.planningExpensesMinor,
     projectAllocationPercent,
   });
 }
@@ -196,26 +214,36 @@ type PriorityProject = {
 
 /**
  * Idempotently materialize waterfall lifetime take + priority project take for a half.
+ * Month leftover is applied once: H1 gets the take, H2 gets 0.
  */
 export async function materializeHalfWaterfall(
   userId: string,
   ref: PeriodRef,
   reporting: Currency,
   rates: Rates,
-  priority?: PriorityProject | null
+  priority?: PriorityProject | null,
+  monthWaterfall?: WaterfallResult | null
 ): Promise<void> {
-  const [scope, resolvedPriority] = await Promise.all([
-    getScopeAmounts(userId, ref.year, ref.month, ref.period, reporting, rates),
+  const resolvedPriority =
     priority !== undefined
-      ? Promise.resolve(priority)
-      : prisma.project.findFirst({
+      ? priority
+      : await prisma.project.findFirst({
           where: { userId, isPriority: true, completedAt: null },
           select: { id: true, allocationPercent: true, periodMode: true },
-        }),
-  ]);
+        });
 
-  const waterfall = waterfallFromScope(scope, resolvedPriority?.allocationPercent);
+  const waterfall =
+    monthWaterfall !== undefined
+      ? monthWaterfall
+      : waterfallFromScope(
+          await getScopeAmounts(userId, ref.year, ref.month, "BOTH", reporting, rates),
+          resolvedPriority?.allocationPercent
+        );
+
   if (!waterfall) return;
+
+  const lifetimeTakeMinor = ref.period === "H1" ? waterfall.lifetimeTakeMinor : 0;
+  const projectTakeMinor = ref.period === "H1" ? waterfall.projectTakeMinor : 0;
 
   const date = midDate(ref);
 
@@ -233,16 +261,16 @@ export async function materializeHalfWaterfall(
       create: {
         userId,
         date,
-        amountMinor: waterfall.lifetimeTakeMinor,
+        amountMinor: lifetimeTakeMinor,
         currency: reporting,
-        note: "Lifetime savings (70% of leftover after received salary and reserved bills)",
+        note: "Lifetime savings (70% of leftover after Main cash and remaining planned bills)",
         source: "waterfall",
         year: ref.year,
         month: ref.month,
         period: ref.period,
       },
       update: {
-        amountMinor: waterfall.lifetimeTakeMinor,
+        amountMinor: lifetimeTakeMinor,
         currency: reporting,
         date,
       },
@@ -252,7 +280,7 @@ export async function materializeHalfWaterfall(
   if (
     resolvedPriority &&
     projectAppliesToPeriod(resolvedPriority.periodMode as PeriodMode, ref.period) &&
-    waterfall.projectTakeMinor > 0
+    projectTakeMinor > 0
   ) {
     writes.push(
       prisma.projectContribution.upsert({
@@ -272,12 +300,12 @@ export async function materializeHalfWaterfall(
           year: ref.year,
           month: ref.month,
           period: ref.period,
-          amountMinor: waterfall.projectTakeMinor,
+          amountMinor: projectTakeMinor,
           currency: reporting,
           source: "waterfall",
         },
         update: {
-          amountMinor: waterfall.projectTakeMinor,
+          amountMinor: projectTakeMinor,
           currency: reporting,
         },
       })
@@ -311,9 +339,26 @@ export async function materializeMonthWaterfall(
     select: { id: true, allocationPercent: true, periodMode: true },
   });
 
+  const monthScope = await getScopeAmounts(userId, year, month, "BOTH", reporting, rates);
+  const monthWaterfall = waterfallFromScope(monthScope, priority?.allocationPercent);
+
   await Promise.all([
-    materializeHalfWaterfall(userId, { year, month, period: "H1" }, reporting, rates, priority),
-    materializeHalfWaterfall(userId, { year, month, period: "H2" }, reporting, rates, priority),
+    materializeHalfWaterfall(
+      userId,
+      { year, month, period: "H1" },
+      reporting,
+      rates,
+      priority,
+      monthWaterfall
+    ),
+    materializeHalfWaterfall(
+      userId,
+      { year, month, period: "H2" },
+      reporting,
+      rates,
+      priority,
+      monthWaterfall
+    ),
   ]);
 
   recentMaterialize.set(key, Date.now());

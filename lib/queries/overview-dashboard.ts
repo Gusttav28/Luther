@@ -215,7 +215,7 @@ export async function getOverviewDashboard(
     getSettings(userId),
   ]);
 
-  const accounts = await getDerivedAccounts(userId, settings);
+  const accounts = await getDerivedAccounts(userId, settings, year, month);
 
   const overview = figuresFromSnapshot(
     currentSnap,

@@ -10,6 +10,32 @@ import {
   safeMaterializeMonth,
   yearMonthFromDateInput,
 } from "@/lib/queries/materialize";
+import { getSettings } from "@/lib/queries/settings";
+import {
+  applyMainCashDelta,
+  convertToStoredMain,
+  loadMainCashStore,
+  mainCashDeltaForAmountEdit,
+  mainCashDeltaForChargeToggle,
+} from "@/lib/queries/main-cash";
+import type { Currency } from "@/lib/money";
+
+async function convertedExpenseToMain(
+  userId: string,
+  amountMinor: number,
+  currency: string
+): Promise<number | null> {
+  const [store, settings] = await Promise.all([
+    loadMainCashStore(userId),
+    getSettings(userId),
+  ]);
+  return convertToStoredMain(
+    amountMinor,
+    currency as Currency,
+    store.currency,
+    settings.rates
+  );
+}
 
 function parseForm(formData: FormData) {
   return expenseSchema.safeParse({
@@ -49,16 +75,27 @@ export async function createExpenseAction(
     }
 
     const { date, amount, currency, name } = parsed.data;
-    await prisma.expense.create({
-      data: {
-        userId,
-        date: new Date(`${date}T12:00:00`),
-        amountMinor: amount,
-        currency,
-        categoryId,
-        name,
-        completed: completedParsed.data,
-      },
+    const completed = completedParsed.data;
+    let chargeConverted: number | null = 0;
+    if (completed) {
+      chargeConverted = await convertedExpenseToMain(userId, amount, currency);
+      if (chargeConverted === null) return GENERIC_ERROR;
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.expense.create({
+        data: {
+          userId,
+          date: new Date(`${date}T12:00:00`),
+          amountMinor: amount,
+          currency,
+          categoryId,
+          name,
+          completed,
+        },
+      });
+      if (completed && chargeConverted !== null) {
+        await applyMainCashDelta(userId, -chargeConverted, tx);
+      }
     });
     const ym = yearMonthFromDateInput(date);
     await safeMaterializeMonth(userId, ym.year, ym.month);
@@ -80,11 +117,30 @@ export async function setExpenseCompletedAction(formData: FormData): Promise<voi
   const completed = formData.get("completed") === "true";
   const existing = await prisma.expense.findFirst({
     where: { id, userId },
-    select: { date: true },
+    select: { date: true, completed: true, amountMinor: true, currency: true },
   });
-  await prisma.expense.updateMany({
-    where: { id, userId },
-    data: { completed },
+  if (!existing) return;
+
+  const converted = await convertedExpenseToMain(
+    userId,
+    existing.amountMinor,
+    existing.currency
+  );
+  const delta = mainCashDeltaForChargeToggle(
+    existing.completed,
+    completed,
+    converted ?? 0
+  );
+  if (delta !== 0 && converted === null) return;
+
+  await prisma.$transaction(async (tx) => {
+    if (delta !== 0) {
+      await applyMainCashDelta(userId, delta, tx);
+    }
+    await tx.expense.updateMany({
+      where: { id, userId },
+      data: { completed },
+    });
   });
   if (existing) {
     const ym = yearMonthFromDateInput(existing.date);
@@ -118,15 +174,38 @@ export async function updateExpenseAction(
     }
 
     const { date, amount, currency, name } = parsed.data;
-    const result = await prisma.expense.updateMany({
+    const existing = await prisma.expense.findFirst({
       where: { id, userId },
-      data: {
-        date: new Date(`${date}T12:00:00`),
-        amountMinor: amount,
-        currency,
-        categoryId,
-        name,
-      },
+      select: { completed: true, amountMinor: true, currency: true },
+    });
+    if (!existing) return GENERIC_ERROR;
+
+    let delta = 0;
+    if (existing.completed) {
+      const oldConverted = await convertedExpenseToMain(
+        userId,
+        existing.amountMinor,
+        existing.currency
+      );
+      const newConverted = await convertedExpenseToMain(userId, amount, currency);
+      if (oldConverted === null || newConverted === null) return GENERIC_ERROR;
+      delta = mainCashDeltaForAmountEdit(true, oldConverted, newConverted);
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      if (delta !== 0) {
+        await applyMainCashDelta(userId, delta, tx);
+      }
+      return tx.expense.updateMany({
+        where: { id, userId },
+        data: {
+          date: new Date(`${date}T12:00:00`),
+          amountMinor: amount,
+          currency,
+          categoryId,
+          name,
+        },
+      });
     });
     if (result.count === 0) return GENERIC_ERROR;
     const ym = yearMonthFromDateInput(date);
@@ -148,9 +227,27 @@ export async function deleteExpenseAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const existing = await prisma.expense.findFirst({
     where: { id, userId },
-    select: { date: true },
+    select: { date: true, completed: true, amountMinor: true, currency: true },
   });
-  await prisma.expense.deleteMany({ where: { id, userId } });
+  if (!existing) return;
+
+  let restore = 0;
+  if (existing.completed) {
+    const converted = await convertedExpenseToMain(
+      userId,
+      existing.amountMinor,
+      existing.currency
+    );
+    if (converted === null) return;
+    restore = converted;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (restore !== 0) {
+      await applyMainCashDelta(userId, restore, tx);
+    }
+    await tx.expense.deleteMany({ where: { id, userId } });
+  });
   if (existing) {
     const ym = yearMonthFromDateInput(existing.date);
     await safeMaterializeMonth(userId, ym.year, ym.month);

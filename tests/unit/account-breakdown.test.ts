@@ -1,46 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
   computeWaterfall,
-  plannedSalaryTakeMinor,
+  leftoverAfterPlannedBills,
   savingsMonthBreakdownFromTakes,
 } from "@/lib/waterfall";
 
-describe("savings month breakdown composition (no second leftover)", () => {
-  it("projectedSum equals fromMain + fromPlanned", () => {
-    const fromMain = 56_000;
-    const fromPlanned = 35_000;
-    const breakdown = savingsMonthBreakdownFromTakes(fromMain, fromPlanned);
-    expect(breakdown.projectedSum).toBe(fromMain + fromPlanned);
-    expect(breakdown.projectedSum).toBe(91_000);
+describe("savings month breakdown (Main leftover take)", () => {
+  it("this-month take is 70% of Main after remaining Planning", () => {
+    const take = computeWaterfall({
+      mainCashMinor: 100_000,
+      remainingPlanningMinor: 40_000,
+    }).lifetimeTakeMinor;
+    const breakdown = savingsMonthBreakdownFromTakes(take, 0);
+    expect(take).toBe(42_000);
+    expect(breakdown.fromMain).toBe(42_000);
+    expect(breakdown.projectedSum).toBe(42_000);
   });
 
-  it("received 100 / planned 50 / charged 20 / planning 0 → 56, 91, 35", () => {
-    const input = {
-      receivedIncomeMinor: 100_000,
-      plannedSalaryMinor: 50_000,
-      chargedExpensesMinor: 20_000,
-      planningExpensesMinor: 0,
-    };
-    const actual = computeWaterfall({
-      receivedIncomeMinor: input.receivedIncomeMinor,
-      chargedExpensesMinor: input.chargedExpensesMinor,
-      planningExpensesMinor: input.planningExpensesMinor,
+  it("cannot-save when Planning covers Main", () => {
+    expect(leftoverAfterPlannedBills(100_000, 120_000)).toBe(0);
+    const take = computeWaterfall({
+      mainCashMinor: 100_000,
+      remainingPlanningMinor: 120_000,
     }).lifetimeTakeMinor;
-    const combined = computeWaterfall({
-      receivedIncomeMinor: input.receivedIncomeMinor + input.plannedSalaryMinor,
-      chargedExpensesMinor: input.chargedExpensesMinor,
-      planningExpensesMinor: input.planningExpensesMinor,
-    }).lifetimeTakeMinor;
-    const fromPlanned = plannedSalaryTakeMinor(input);
-    const breakdown = savingsMonthBreakdownFromTakes(actual, fromPlanned);
-
-    expect(actual).toBe(56_000);
-    expect(combined).toBe(91_000);
-    expect(fromPlanned).toBe(35_000);
-    expect(breakdown.fromMain).toBe(actual);
-    expect(breakdown.fromPlanned).toBe(fromPlanned);
-    expect(breakdown.projectedSum).toBe(actual + fromPlanned);
-    expect(breakdown.projectedSum).toBe(combined);
+    expect(take).toBe(0);
   });
 
   it("null legs stay null and do not coerce to 0", () => {
