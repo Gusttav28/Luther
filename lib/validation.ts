@@ -82,6 +82,25 @@ export const expenseSchema = z
     path: ["categoryName"],
   });
 
+/**
+ * Create-time Planning / Already charged flag.
+ * Accepts only "true" | "false"; missing/empty → Planning (false).
+ * Do not use z.coerce.boolean() — the string "false" is truthy.
+ * Keep this out of expenseSchema so updateExpenseAction cannot write completed.
+ */
+export const completedCreateSchema = z
+  .string()
+  .refine((v) => v === "" || v === "true" || v === "false", {
+    message: "Choose Planning or Already charged",
+  })
+  .transform((v) => v === "true");
+
+/** Parse FormData `completed` for create. Null/undefined → Planning. */
+export function parseCompletedCreate(raw: unknown) {
+  const value = raw == null ? "" : String(raw);
+  return completedCreateSchema.safeParse(value);
+}
+
 export const categorySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60),
 });

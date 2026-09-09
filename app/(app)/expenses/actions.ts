@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
-import { expenseSchema, fieldErrors } from "@/lib/validation";
+import { expenseSchema, fieldErrors, parseCompletedCreate } from "@/lib/validation";
 import { resolveCategoryId } from "@/lib/category-resolve";
 import { GENERIC_ERROR, type ActionState } from "@/lib/action-state";
 import {
@@ -29,7 +29,15 @@ export async function createExpenseAction(
   try {
     const userId = await requireUserId();
     const parsed = parseForm(formData);
-    if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+    const completedParsed = parseCompletedCreate(formData.get("completed"));
+    if (!parsed.success || !completedParsed.success) {
+      return {
+        errors: {
+          ...(parsed.success ? {} : fieldErrors(parsed.error)),
+          ...(completedParsed.success ? {} : { completed: "Choose Planning or Already charged" }),
+        },
+      };
+    }
 
     const categoryId = await resolveCategoryId(
       userId,
@@ -49,7 +57,7 @@ export async function createExpenseAction(
         currency,
         categoryId,
         name,
-        completed: false,
+        completed: completedParsed.data,
       },
     });
     const ym = yearMonthFromDateInput(date);
