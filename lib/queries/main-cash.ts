@@ -28,6 +28,14 @@ export function mainOpeningAfterDelta(openingMinor: number, deltaMinor: number):
   return openingMinor + deltaMinor;
 }
 
+export function cannotApplyChargeToggle(
+  wasCompleted: boolean,
+  willBeCompleted: boolean,
+  convertedMinor: number | null
+): boolean {
+  return wasCompleted !== willBeCompleted && convertedMinor === null;
+}
+
 export function mainCashDeltaForChargeToggle(
   wasCompleted: boolean,
   willBeCompleted: boolean,

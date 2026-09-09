@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cannotApplyChargeToggle,
   convertToStoredMain,
   mainCashDeltaForAmountEdit,
   mainCashDeltaForChargeToggle,
@@ -34,5 +35,12 @@ describe("main cash charge delta", () => {
 
   it("cross-currency convert returns null when the rate is missing", () => {
     expect(convertToStoredMain(100_00, "USD", "CRC", { usdToCrc: null })).toBeNull();
+  });
+
+  it("aborts a charge toggle when convert is missing", () => {
+    expect(cannotApplyChargeToggle(false, true, null)).toBe(true);
+    expect(cannotApplyChargeToggle(true, false, null)).toBe(true);
+    expect(cannotApplyChargeToggle(false, true, 1_000_000)).toBe(false);
+    expect(cannotApplyChargeToggle(false, false, null)).toBe(false);
   });
 });

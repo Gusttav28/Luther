@@ -13,6 +13,7 @@ import {
 import { getSettings } from "@/lib/queries/settings";
 import {
   applyMainCashDelta,
+  cannotApplyChargeToggle,
   convertToStoredMain,
   loadMainCashStore,
   mainCashDeltaForAmountEdit,
@@ -126,12 +127,12 @@ export async function setExpenseCompletedAction(formData: FormData): Promise<voi
     existing.amountMinor,
     existing.currency
   );
-  const delta = mainCashDeltaForChargeToggle(
-    existing.completed,
-    completed,
-    converted ?? 0
-  );
-  if (delta !== 0 && converted === null) return;
+  if (cannotApplyChargeToggle(existing.completed, completed, converted)) return;
+
+  const delta =
+    converted === null
+      ? 0
+      : mainCashDeltaForChargeToggle(existing.completed, completed, converted);
 
   await prisma.$transaction(async (tx) => {
     if (delta !== 0) {
@@ -142,10 +143,8 @@ export async function setExpenseCompletedAction(formData: FormData): Promise<voi
       data: { completed },
     });
   });
-  if (existing) {
-    const ym = yearMonthFromDateInput(existing.date);
-    await safeMaterializeMonth(userId, ym.year, ym.month);
-  }
+  const ym = yearMonthFromDateInput(existing.date);
+  await safeMaterializeMonth(userId, ym.year, ym.month);
   revalidatePath("/expenses");
   revalidatePath("/plan");
   revalidatePath("/");

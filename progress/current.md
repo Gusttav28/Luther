@@ -30,4 +30,4 @@ Overview Main is stored Main cash. Charging an expense subtracts from Main (`7_3
 
 ## Notes
 
-Independent Reviewer should verify the charge→Main transaction and that H1+H2 waterfall amounts for a month sum to one take.
+Independent Reviewer first verdict was **CHANGES_REQUESTED** (`reviews/main-cash-planned-savings/review.md`): `setExpenseCompletedAction` persisted a charge when convert returned null. Fixed: toggle aborts when status would change and convert is missing (`cannotApplyChargeToggle`). Waiting for re-review.
