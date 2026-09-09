@@ -15,6 +15,23 @@ import type { AccountKind } from "@/lib/queries/accounts";
 
 const CURRENCY_OPTIONS: Currency[] = ["CRC", "USD"];
 
+function firstOpenKind(hasMain: boolean, hasSavings: boolean): AccountKind {
+  if (!hasMain) return "MAIN";
+  if (!hasSavings) return "SAVINGS";
+  return "CUSTOM";
+}
+
+function resolvedKind(
+  choice: AccountKind | null,
+  hasMain: boolean,
+  hasSavings: boolean
+): AccountKind {
+  const fallback = firstOpenKind(hasMain, hasSavings);
+  if (choice === "MAIN" && hasMain) return fallback;
+  if (choice === "SAVINGS" && hasSavings) return fallback;
+  return choice ?? fallback;
+}
+
 function KindPicker({
   value,
   onChange,
@@ -72,8 +89,8 @@ export function AddAccountForm({
   variant?: "card" | "sheet";
   onSuccess?: () => void;
 }) {
-  const firstKind: AccountKind = !hasMain ? "MAIN" : !hasSavings ? "SAVINGS" : "CUSTOM";
-  const [kind, setKind] = useState<AccountKind>(firstKind);
+  const [kindChoice, setKindChoice] = useState<AccountKind | null>(null);
+  const kind = resolvedKind(kindChoice, hasMain, hasSavings);
   const [state, formAction] = useActionState(createAccountAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
   const sheet = variant === "sheet";
@@ -82,15 +99,9 @@ export function AddAccountForm({
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
-      setKind(!hasMain ? "MAIN" : !hasSavings ? "SAVINGS" : "CUSTOM");
       onSuccess?.();
     }
-  }, [state, onSuccess, hasMain, hasSavings]);
-
-  useEffect(() => {
-    if (kind === "MAIN" && hasMain) setKind(!hasSavings ? "SAVINGS" : "CUSTOM");
-    else if (kind === "SAVINGS" && hasSavings) setKind("CUSTOM");
-  }, [hasMain, hasSavings, kind]);
+  }, [state, onSuccess]);
 
   const nameDefault =
     kind === "MAIN" ? "Main account" : kind === "SAVINGS" ? "Savings account" : "";
@@ -114,7 +125,7 @@ export function AddAccountForm({
         <div className={sheet ? "col-span-2" : ""}>
           <KindPicker
             value={kind}
-            onChange={setKind}
+            onChange={setKindChoice}
             hasMain={hasMain}
             hasSavings={hasSavings}
             idPrefix={idPrefix}
