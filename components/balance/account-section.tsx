@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Money } from "@/components/money";
 import type { Currency } from "@/lib/money";
 import type { BalanceAccountView, SavingsMonthBreakdown } from "@/lib/queries/accounts";
@@ -19,14 +20,51 @@ function KindLabel({ kind }: { kind: BalanceAccountView["kind"] }) {
   return "Custom";
 }
 
+function MainAccountCard({
+  account,
+  compact,
+}: {
+  account: BalanceAccountView;
+  compact: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const amountClass = `font-bold tabular-nums tracking-tight ${
+    compact ? "text-[22px]" : "text-xl sm:text-2xl"
+  } text-ink`;
+
+  if (editing) {
+    return (
+      <MainOpeningForm
+        accountId={account.id}
+        openingPrefill={(account.openingMinor / 100).toFixed(2)}
+        currency={account.currency}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="mt-1 flex items-center justify-between gap-3">
+      <p className={amountClass}>
+        <Money minor={account.openingMinor} currency={account.currency} />
+      </p>
+      <button
+        type="button"
+        className="btn-secondary shrink-0 px-2 py-1 text-xs"
+        onClick={() => setEditing(true)}
+      >
+        Edit
+      </button>
+    </div>
+  );
+}
+
 export function AccountCards({
   accounts,
   breakdown,
   leftoverHintMinor,
   currency,
   defaultDate,
-  startingOpeningPrefill,
-  startingOpeningCurrency,
   compact = false,
 }: {
   accounts: BalanceAccountView[];
@@ -34,8 +72,6 @@ export function AccountCards({
   leftoverHintMinor: number | null;
   currency: Currency;
   defaultDate: string;
-  startingOpeningPrefill: string;
-  startingOpeningCurrency: Currency;
   compact?: boolean;
 }) {
   if (accounts.length === 0) return null;
@@ -43,7 +79,7 @@ export function AccountCards({
   return (
     <div className={compact ? "space-y-3" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
       {accounts.map((account) => (
-          <article
+        <article
           key={account.id}
           className={
             compact
@@ -55,25 +91,21 @@ export function AccountCards({
             <KindLabel kind={account.kind} />
           </p>
           <h3 className="text-base font-semibold text-ink">{account.name}</h3>
-          <p
-            className={`mt-1 font-bold tabular-nums tracking-tight ${
-              compact ? "text-[22px]" : "text-xl sm:text-2xl"
-            } text-ink`}
-          >
-            <Money minor={account.balanceMinor} currency={currency} />
-          </p>
-
           {account.kind === "MAIN" ? (
-            <MainOpeningForm
-              accountId={account.id}
-              openingPrefill={
-                account.currency === startingOpeningCurrency
-                  ? startingOpeningPrefill
-                  : (account.openingMinor / 100).toFixed(2)
-              }
-              currency={account.currency}
+            <MainAccountCard
+              key={`${account.openingMinor}-${account.currency}`}
+              account={account}
+              compact={compact}
             />
-          ) : null}
+          ) : (
+            <p
+              className={`mt-1 font-bold tabular-nums tracking-tight ${
+                compact ? "text-[22px]" : "text-xl sm:text-2xl"
+              } text-ink`}
+            >
+              <Money minor={account.balanceMinor} currency={currency} />
+            </p>
+          )}
 
           {account.kind === "SAVINGS" ? (
             <dl className="mt-4 space-y-2 border-t border-line pt-3 text-sm">

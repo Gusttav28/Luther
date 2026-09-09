@@ -198,28 +198,29 @@ export function MainOpeningForm({
   accountId,
   openingPrefill,
   currency,
+  onCancel,
 }: {
   accountId: string;
   openingPrefill: string;
   currency: Currency;
+  onCancel: () => void;
 }) {
   const [state, formAction] = useActionState(updateMainOpeningAction, initialActionState);
   return (
     <form action={formAction} className="mt-3 space-y-2">
       <input type="hidden" name="id" value={accountId} />
-      <p className="text-xs text-ink-muted">Opening is the Settings starting balance.</p>
       <div className="flex flex-wrap gap-2">
         <input
           name="opening"
           inputMode="decimal"
           defaultValue={openingPrefill}
-          aria-label="Main opening"
+          aria-label="Main amount"
           className="field-input min-w-[8rem] flex-1"
         />
         <select
           name="currency"
           defaultValue={currency}
-          aria-label="Opening currency"
+          aria-label="Currency"
           className="field-input w-28"
         >
           {CURRENCY_OPTIONS.map((c) => (
@@ -228,11 +229,15 @@ export function MainOpeningForm({
             </option>
           ))}
         </select>
-        <PendingSubmitButton idle="Save" className="btn-secondary" pendingLabel="Saving" />
       </div>
       {state.errors?.opening && <p className="error-text">{state.errors.opening}</p>}
       {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
-      {state.ok ? <p className="text-xs text-brand-accent">Saved.</p> : null}
+      <div className="flex flex-wrap gap-2">
+        <PendingSubmitButton idle="Save" className="btn-primary px-3 py-1.5 text-xs" pendingLabel="Saving" />
+        <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

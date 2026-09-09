@@ -168,8 +168,6 @@ export default async function BalancePage() {
             leftoverHintMinor={accountsPage.leftoverHintMinor}
             currency={settings.reportingCurrency}
             defaultDate={defaultDate}
-            startingOpeningPrefill={accountsPage.startingOpeningPrefill}
-            startingOpeningCurrency={accountsPage.startingOpeningCurrency}
           />
           <AddAccountForm
             hasMain={accountsPage.hasMain}
