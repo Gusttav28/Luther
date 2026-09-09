@@ -42,7 +42,7 @@
   - `lib/queries/savings.ts`, `lib/queries/projects.ts`
 - Savings page still shows **From planned salary** (`app/(app)/savings/page.tsx`, `components/savings/mobile-savings.tsx`) — allowed; R3/R7 apply to Overview and Balance Savings only.
 
-Reviewer did not implement this work and did not edit application code or tests.
+Re-review scoped `4adcc89` plus leftover/card/materialize regression check. Reviewer did not implement this work and did not edit application code or tests.
 
 ## Commands run
 
