@@ -8,9 +8,13 @@ export default defineConfig({
       "tests/unit/waterfall.test.ts",
       "tests/unit/account-breakdown.test.ts",
       "tests/unit/main-cash.test.ts",
+      "tests/unit/overview-dashboard.test.ts",
       "tests/unit/validation.test.ts",
     ],
     environment: "node",
+    env: {
+      AUTH_SECRET: "test-secret-not-used-in-production",
+    },
     fileParallelism: false,
   },
   resolve: {

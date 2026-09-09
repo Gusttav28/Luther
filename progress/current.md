@@ -1,23 +1,33 @@
-# Current specification progress
+# Current implementation progress
 
 - Work item: main-cash-planned-savings (`specs/main-cash-planned-savings/`)
 - Branch: `cursor/main-cash-planned-savings-ef43`
 - Spec package: 2026-09-09 (amended same day: Already charged reduces Main)
-- Spec Author session: 2026-09-09
-- Handoff: **SPEC_READY**
+- Human approval: **GO** 2026-09-09
+- Handoff: **IMPLEMENTED**
 
 ## Outcome
 
-Overview Main matches the cash typed on Balance Main. **Already charged** subtracts that expense from stored Main (example: ₡73,233 − ₡10,000 → ₡63,233); Planned expenses drops because the row is no longer Planning. Leftover for the 70% save is **current** Main minus this month’s remaining Planning. If Main cannot cover those bills, take is 0. If nothing remains to charge, take is 70% of current Main. Overview third card is **Planned expenses**. **From planned salary** is removed.
+Overview Main is stored Main cash. Charging an expense subtracts from Main (`7_323_300 − 1_000_000 → 6_323_300`). Leftover is `max(0, current Main − remaining Planning)`; 70% of leftover is the month take (H1 waterfall row; H2 is 0). Overview cards: Main, Savings (month take), Planned expenses.
 
-## Amendment (same day)
+## Tasks
 
-Owner confirmed leftover = Main − remaining Planning, then asked that marking an expense Already charged also reduce Main (and restore on un-charge). Requirements R1/R8/R10, design, and T8/TV4 now include that. Leftover still does **not** subtract charged a second time.
+- T1 leftover helper + waterfall tests
+- T2 scope + materialize once per month
+- T3 Overview loaders
+- T4 Overview UI cards
+- T5 Balance Savings month lines
+- T6 leftover-encoding tests
+- T8 charge/un-charge applies converted delta to Main
+- T7 this handoff
 
-## Notes for the owner
+## Verification
 
-Waiting for owner **GO** on this amended spec before implementation. Do not treat the earlier leftover-only draft as approved.
+- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 48 passed (waterfall, breakdown, main-cash, overview-dashboard, validation).
+- TV2: default `vitest.config.ts` aggregations **skipped** — Postgres at `127.0.0.1:5432` unreachable (`P1001`).
+- TV3–TV5: not run against a live household in this environment (no owner session / seed of ₡73,233).
+- TV6: leftover helper has two inputs (Main, Planning); charged not subtracted again; no new npm packages or Prisma models; expense Main writes scoped by `userId` + `kind = MAIN`.
 
-## Leader
+## Notes
 
-Routed Spec Author to finish the charge→Main amendment. Implementation is blocked until GO.
+Independent Reviewer should verify the charge→Main transaction and that H1+H2 waterfall amounts for a month sum to one take.
