@@ -38,15 +38,22 @@
   - Preconditions: T1–T3
   - Expected evidence: No test still asserts received−charged−planning leftover or Overview from-planned identity.
 
+- [ ] T8 — Expense charge/un-charge applies converted delta to Main
+  - Files: `app/(app)/expenses/actions.ts`, `lib/queries/main-cash.ts` or `lib/queries/accounts.ts`, unit test for the delta helper
+  - Requirements: R1, R8, R10
+  - Preconditions: Human-approved spec (can land in parallel with T1; leftover tests assume Main is already reduced)
+  - Expected evidence: Planning→charged subtracts converted amount from MAIN `openingMinor` and Settings `startingBalanceMinor`. Un-charge and delete charged add it back. Create as charged subtracts. Amount edit while charged applies delta. Convert failure does not persist a partial charge. No historical backfill of old charged rows. Revalidate `/` and `/balance`. Canonical: 7_323_300 − 1_000_000 → 6_323_300 (₡73,233.00 − ₡10,000.00).
+
 - [ ] T7 — `progress/current.md` handoff **IMPLEMENTED**
   - Files: `progress/current.md`
   - Requirements: — (process)
+  - Preconditions: T1–T6, T8
 
 ## Verification
 
 - [ ] TV1 — `npx vitest run tests/unit/waterfall.test.ts --config vitest.waterfall.config.ts`
   - Covers: R4, R5, R8
-  - Expected result: Gate and 70%-of-leftover cases pass.
+  - Expected result: Gate and 70%-of-leftover cases pass. Charged is not an input.
 
 - [ ] TV2 — Overview/aggregations unit tests that still run without Postgres, plus those with DB if `DATABASE_URL` exists
   - Covers: R1, R5, R6
@@ -56,16 +63,16 @@
   - Covers: R1
   - Expected result: Same amount both places.
 
-- [ ] TV4 — Manual: Planned expenses and cannot-save
-  - Covers: R2, R4, R5
-  - Expected result: Planning remaining shown. If Planning ≥ Main, Savings take 0. If Planning < Main, Savings = 70% of difference. Charging a Planning row lowers Planned expenses and can raise take.
+- [ ] TV4 — Manual: charge reduces Main; Planned expenses and cannot-save
+  - Covers: R2, R4, R5, R10
+  - Expected result: Main ₡73,233, charge Area Service ₡10,000 Already charged → Main ₡63,233 on Overview and Balance; Planned expenses down ₡10,000. If nothing remains Planning, Savings take = 70% of ₡63,233. If remaining Planning ≥ Main, take 0. Toggle back to Planning restores ₡73,233.
 
 - [ ] TV5 — Manual: From planned salary gone; series unchanged
   - Covers: R3, R7
   - Expected result: No that label on Overview. Balance Current still Total cash series.
 
-- [ ] TV6 — Code review: no double month take, charged not in leftover, no new deps, `userId`
-  - Covers: R6, R8, R9
+- [ ] TV6 — Code review: no double month take, charged not in leftover, no new deps, `userId`, no historical charged backfill
+  - Covers: R6, R8, R9, R10
 
 ## Traceability
 
@@ -77,13 +84,14 @@
 | T4 | R1, R2, R3, R4 |
 | T5 | R7 |
 | T6 | R4, R5, R6 |
+| T8 | R1, R8, R10 |
 | T7 | — |
 | TV1 | R4, R5, R8 |
 | TV2 | R1, R5, R6 |
 | TV3 | R1 |
-| TV4 | R2, R4, R5 |
+| TV4 | R2, R4, R5, R10 |
 | TV5 | R3, R7 |
-| TV6 | R6, R8, R9 |
+| TV6 | R6, R8, R9, R10 |
 
 ## Final scope check
 

@@ -4,7 +4,7 @@
 - Outcome: Overview and Balance Main show the cash the owner typed on Main. Savings is 70% of what remains after covering this month’s still-planned (not yet charged) expenses from that cash. If Main cannot cover those planned expenses, nothing can be saved.
 - Branch: cursor/main-cash-planned-savings-ef43
 - Status: Specification
-- Spec version: 2026-09-09
+- Spec version: 2026-09-09 (amended same day: Already charged reduces Main)
 
 ## Problem
 
@@ -12,10 +12,11 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 
 ## In scope
 
-- Overview **Main account** = Balance Main opening (the amount saved on the Main card / Settings starting when synced). Same number on Overview and Balance Main.
-- Overview third card: **Planned expenses** = this month’s expenses that are still Planning (`completed === false`), i.e. planned to spend this month minus already charged.
+- Overview **Main account** = Balance Main opening (Settings starting when synced). Same number on Overview and Balance Main.
+- When an expense is marked **Already charged**, subtract that amount from Main (73,233 − 10,000 Area Service → 63,233). Planned expenses also drop that amount because the row is no longer Planning. Un-charging adds the amount back to Main.
+- Overview third card: **Planned expenses** = this month’s expenses still Planning (`completed === false`).
 - Remove Overview **From planned salary**.
-- Leftover for the 70% lifetime take:
+- Leftover for the 70% lifetime take (after Main has already been reduced by charges):
 
   ```
   remainingPlanning = this month’s Planning expenses (completed === false, period BOTH)
@@ -23,9 +24,9 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
   lifetimeTake       = floor(70% of leftover)   // 0 if leftover is 0
   ```
 
-- If Main cash ≤ remaining planned expenses, leftover and take are 0 (cannot save).
-- `mainCash` is the Main opening in reporting currency (Settings starting if no MAIN row yet).
-- Charged expenses (`completed === true`) are **not** subtracted again from Main for this leftover: Main is cash on hand as entered. Remaining Planning is the unpaid planned spend still ahead this month.
+- If Main cash ≤ remaining planned expenses, leftover and take are 0 (cannot save). If nothing remains to be charged, leftover = Main and take is 70% of Main.
+- `mainCash` is the current Main opening in reporting currency (Settings starting if no MAIN row yet).
+- Leftover does **not** subtract charged again: the charge already reduced Main. Remaining Planning is only the unpaid planned spend.
 - Overview **Savings account** (this item) = that month’s `lifetimeTake` (what can be saved now), not Total cash − Main.
 - Materialize the same month take into existing `SavingsContribution` waterfall rows so the Savings page lifetime still accumulates it.
 - Monthly Overview **Saved** KPI uses this take.
@@ -37,7 +38,7 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 
 - Changing the 70% rate or making it editable.
 - Removing income Planned checkbox or expense Planning / Already charged.
-- Subtracting all-time charged expenses from Main for leftover (would double-count if Main is cash on hand).
+- Retroactively subtracting every historical Already charged expense from a newly typed Main opening (only **new** charge/un-charge/create-charged/delete-charged events adjust Main).
 - Auto-transfer into Custom / Prizes.
 - Bank sync.
 - Deleting Main/Savings.
@@ -46,7 +47,7 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 
 ## Definitions
 
-- **Main cash**: converted `Account` `kind=MAIN` `openingMinor`. If no MAIN row, Settings `startingBalanceMinor` (same value after the existing Main ↔ Settings sync). This is the amount the owner typed (e.g. ₡73,233.00).
+- **Main cash**: converted `Account` `kind=MAIN` `openingMinor` (Settings `startingBalanceMinor` if no MAIN row). Starts as the amount the owner typed (e.g. ₡73,233.00). Each **Already charged** mutation subtracts that expense (converted) from this stored opening; switching back to Planning adds it back.
 - **Already charged (this month)**: `Expense.completed === true` in the viewed calendar month.
 - **Remaining planned expenses (this month)**: `Expense.completed === false` in that month, period `BOTH`. Label **Planned expenses**. This is planned-to-spend-this-month minus already charged (uncharged Planning rows).
 - **Leftover (locked for this item)**:
@@ -68,9 +69,9 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 - Trigger: Owner views Overview or Balance; or saves Main opening / Settings starting.
 - Preconditions: Human-approved spec. MAIN opening ↔ Settings starting already implemented.
 - Actor/system: Overview account cards; Balance Main card.
-- Expected response: Both surfaces show **Main cash** (the saved opening). They must match when rates exist (same minor units in reporting currency, or Main’s own currency on Balance as today if opening currency is CRC/USD and reporting matches). Do not show Total cash − Savings as Overview Main.
-- State change: None on read. Writes stay the existing opening ↔ Settings sync.
-- Visible/resulting evidence: Enter ₡73,233.00 on Main → Overview Main and Balance Main show that amount (not ~₡297k derived cash).
+- Expected response: Both surfaces show **Main cash** (current stored opening). They must match when rates exist. Do not show Total cash − Savings as Overview Main.
+- State change: None on read. Manual Edit of Main still writes opening ↔ Settings. Charge events also write opening (R10).
+- Visible/resulting evidence: Enter ₡73,233.00 on Main → Overview Main and Balance Main show that amount (not ~₡297k derived cash). After charging ₡10,000, both show ₡63,233.00.
 - Failure behavior: No MAIN and starting 0 → show 0. Missing FX when opening currency ≠ reporting → Money “—” / set-rate, do not coerce to 0.
 - Acceptance evidence: Code review `getDerivedAccounts` / Overview cards read MAIN opening (or Settings starting). Manual: Overview Main equals Balance Main.
 
@@ -81,7 +82,7 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 - Actor/system: Overview account row, third card.
 - Expected response: Label exactly **Planned expenses**. Value = converted sum of `completed === false` expenses in that month (`BOTH`). Already charged rows are excluded.
 - State change: None.
-- Visible/resulting evidence: Charge a Planning expense → Planned expenses drops; Main cash does not change. Empty Planning → 0.
+- Visible/resulting evidence: Charge a Planning expense → Planned expenses drops by that amount (R10 also drops Main). Empty Planning → 0.
 - Failure behavior: Missing FX → null / set-rate.
 - Acceptance evidence: Loader uses `planningExpensesMinor` from `getScopeAmounts(..., "BOTH")` (or equivalent `completed: false` month sum). No plan-cell matrix required.
 
@@ -127,10 +128,10 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 - Expected response: Month lines come from R4–R5 (take / leftover), not `plannedSalaryTakeMinor`. Do not show **From planned salary**. All-time Savings may remain opening + lifetime contributions.
 - Acceptance evidence: `account-section.tsx` copy/labels; helpers reused not copied.
 
-### R8 — Charged expenses do not reduce Main leftover a second time
+### R8 — Leftover does not subtract charged a second time
 
-- Trigger: Leftover compute.
-- Expected response: Inputs are Main cash and remaining Planning only. `chargedExpensesMinor` is not subtracted from Main for this leftover.
+- Trigger: Leftover compute after a charge has already updated Main (R10).
+- Expected response: Inputs are **current** Main cash and remaining Planning only. Do not also subtract `chargedExpensesMinor` inside leftover (that would double-count).
 - Acceptance evidence: Helper signature / unit tests omit charged from leftover.
 
 ### R9 — Auth, privacy, dependencies
@@ -139,15 +140,28 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 - Expected response: `requireUserId`; `userId` on queries; no secrets; `package.json` unchanged; no new Prisma models.
 - Acceptance evidence: Diff review.
 
+### R10 — Already charged reduces stored Main; un-charge restores it
+
+- Trigger: Owner marks an expense Already charged or Planning; creates an expense as Already charged; deletes a charged expense; edits the amount of a charged expense.
+- Preconditions: Main opening or Settings starting exists (create 0 if needed so the subtract can apply). Expense has `userId`.
+- Actor/system: Expense create / `setExpenseCompletedAction` / update / delete, plus Main ↔ Settings sync.
+- Expected response: Planning → Already charged (or create as charged): subtract converted amount from Main opening and Settings starting. Already charged → Planning: add it back. Delete charged: add it back. Change amount while charged: apply the delta. Do **not** walk history and subtract every old charged row when the owner first types ₡73,233.
+- State change: `Account.openingMinor` / `Settings.startingBalanceMinor` (and currency conversion as needed). Revalidate `/`, `/balance`.
+- Visible/resulting evidence: Main ₡73,233, Area Service ₡10,000 charged → Main ₡63,233 and Planned expenses down ₡10,000. Toggle back to Planning → Main ₡73,233 and Planned expenses up ₡10,000.
+- Failure behavior: Missing FX → do not persist the status change without the Main adjust (or skip the Main adjust and return the existing generic error — prefer **no partial**: if convert fails, do not mark charged). Unauthenticated → existing deny.
+- Acceptance evidence: Code review of expense actions; manual Area Service walkthrough.
+
 ## Traceability
 
 | Source request | Requirement IDs |
 | --- | --- |
 | Main shows the typed Balance amount on Overview | R1 |
-| Planned expenses = month planned minus charged | R2, R8 |
+| Planned expenses = month planned minus charged | R2, R10 |
+| Charge Area Service 10,000 → Main 63,233 | R10 |
 | Remove different derived Main / From planned salary | R1, R3 |
 | Save only if Main > remaining planned expenses | R4 |
-| 70% of that leftover | R5, R6, R7 |
+| 70% of that leftover (including after Main dropped) | R4, R5, R6, R7 |
+| Do not subtract charged twice in leftover | R8 |
 | Security / no new packages | R9 |
 
 ## Assumptions
@@ -158,4 +172,4 @@ Overview **Main account** still uses derived cash (Total cash − Savings), so i
 
 ## Open questions
 
-- None blocking. If Gustavo meant leftover = Main − (charged + planning) for the month, that would double-count charged whenever Main is cash already net of paid bills; this spec excludes that. Say so on GO if charged should also be subtracted.
+- None blocking. Charging now **does** reduce stored Main (R10). Leftover still does not subtract charged a second time (R8).
