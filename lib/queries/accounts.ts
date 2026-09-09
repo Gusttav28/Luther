@@ -172,9 +172,8 @@ export async function getBalanceAccountsPage(
   userId: string,
   settings: AppSettings
 ): Promise<BalanceAccountsPage> {
-  const [rows, series, month] = await Promise.all([
+  const [rows, month] = await Promise.all([
     loadAccountRows(userId),
-    getBalanceSeries(userId, settings),
     getCurrentMonthBreakdown(userId, settings),
   ]);
 
@@ -186,16 +185,14 @@ export async function getBalanceAccountsPage(
       ? { openingMinor: savingsRow.openingMinor, currency: savingsRow.currency }
       : null
   );
-  const totalCash = series.currentBalance;
-  const mainDisplay =
-    totalCash === null || savingsAllTime === null ? null : totalCash - savingsAllTime;
 
   const kindOrder: Record<AccountKind, number> = { MAIN: 0, SAVINGS: 1, CUSTOM: 2 };
   const accounts: BalanceAccountView[] = rows
     .map((row) => {
       let balanceMinor: number | null;
       if (row.kind === "MAIN") {
-        balanceMinor = mainDisplay;
+        // Card shows the opening the owner entered (same currency as saved).
+        balanceMinor = row.openingMinor;
       } else if (row.kind === "SAVINGS") {
         balanceMinor = savingsAllTime;
       } else {

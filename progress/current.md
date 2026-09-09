@@ -60,6 +60,11 @@
 
 - `lib/queries/accounts.ts` — if production Postgres has not applied `Account` / `AccountEntry` yet (`P2021`), Balance still loads the cash series with an empty accounts list instead of a server exception. Creating accounts still needs `npx prisma db push` or `npx prisma migrate deploy` against Supabase.
 
+### Follow-up — Main card shows the saved amount + Edit
+
+- `lib/queries/accounts.ts` — Balance Main card balance is the stored opening (what the owner entered), not Total cash − Savings. Overview derived Main is unchanged.
+- `components/balance/account-section.tsx`, `app/(app)/balance/account-forms.tsx` — Main shows the amount and an **Edit** button; the opening fields are only in edit mode.
+
 ## Verification
 
 - TV1/TV2: `npx vitest run tests/unit/waterfall.test.ts tests/unit/account-breakdown.test.ts --config vitest.waterfall.config.ts` — **12 passed**

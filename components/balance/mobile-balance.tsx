@@ -247,8 +247,6 @@ export function MobileBalance({
             leftoverHintMinor={leftoverHintMinor}
             currency={currency}
             defaultDate={defaultDate}
-            startingOpeningPrefill={startingOpeningPrefill}
-            startingOpeningCurrency={startingOpeningCurrency}
             compact
           />
         )}
