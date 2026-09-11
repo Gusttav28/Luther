@@ -61,7 +61,7 @@ function MainAccountCard({
 
 export function AccountCards({
   accounts,
-  breakdown,
+  breakdown: _breakdown,
   leftoverHintMinor,
   currency,
   defaultDate,
@@ -109,12 +109,6 @@ export function AccountCards({
 
           {account.kind === "SAVINGS" ? (
             <dl className="mt-4 space-y-2 border-t border-line pt-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-ink-muted">This month (70%)</dt>
-                <dd className="font-semibold tabular-nums">
-                  <Money minor={breakdown.fromMain} currency={currency} />
-                </dd>
-              </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-ink-muted">Leftover after save</dt>
                 <dd className="font-semibold tabular-nums">

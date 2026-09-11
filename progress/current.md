@@ -1,34 +1,32 @@
 # Current implementation progress
 
-- Work item: main-cash-planned-savings (`specs/main-cash-planned-savings/`)
-- Branch: `cursor/main-cash-planned-savings-ef43`
-- Spec package: 2026-09-09 (amended same day: Already charged reduces Main)
-- Human approval: **GO** 2026-09-09
+- Work item: balance-savings-consistency (`specs/balance-savings-consistency/`)
+- Branch: `cursor/balance-savings-consistency-ef43`
+- Spec package: 2026-09-11
+- Human approval: **GO** 2026-09-11
 - Handoff: **IMPLEMENTED**
-- Review: **APPROVED** (`reviews/main-cash-planned-savings/review.md`, re-review after `4adcc89`)
+- Review: **APPROVED** (`reviews/balance-savings-consistency/review.md`)
 
 ## Outcome
 
-Overview Main is stored Main cash. Charging an expense subtracts from Main (`7_323_300 − 1_000_000 → 6_323_300`). Leftover is `max(0, current Main − remaining Planning)`; 70% of leftover is the month take (H1 waterfall row; H2 is 0). Overview cards: Main, Savings (month take), Planned expenses.
+Balance and Overview Savings headlines are this month’s leftover take. Creating Savings no longer shows opening + lifetime. Savings page leftover/take uses Main − remaining Planning; From planned salary is gone. Balance Accounts sit at the top. Half-month running table/charts are gone. Month table compares Spent vs Saved (newest first).
 
 ## Tasks
 
-- T1 leftover helper + waterfall tests
-- T2 scope + materialize once per month
-- T3 Overview loaders
-- T4 Overview UI cards
-- T5 Balance Savings month lines
-- T6 leftover-encoding tests
-- T8 charge/un-charge applies converted delta to Main
+- T1 Balance Savings headline = leftover take
+- T2 Savings page leftover copy; drop From planned salary
+- T3 Accounts first on Balance
+- T4 Remove half-month running UI
+- T5 Month Spent / Saved table
+- T6 Tests
 - T7 this handoff
 
 ## Verification
 
-- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 48 passed (waterfall, breakdown, main-cash, overview-dashboard, validation).
-- TV2: default `vitest.config.ts` aggregations **skipped** — Postgres at `127.0.0.1:5432` unreachable (`P1001`).
-- TV3–TV5: not run against a live household in this environment (no owner session / seed of ₡73,233).
-- TV6: leftover helper has two inputs (Main, Planning); charged not subtracted again; no new npm packages or Prisma models; expense Main writes scoped by `userId` + `kind = MAIN`.
+- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 56 passed.
+- TV2–TV4: not run against a live household in this environment (no owner session).
+- TV5: no new npm packages or Prisma models; month loader and account queries stay `userId`-scoped; leftover still omits charged.
 
 ## Notes
 
-Independent Reviewer first verdict was **CHANGES_REQUESTED** (`reviews/main-cash-planned-savings/review.md`): `setExpenseCompletedAction` persisted a charge when convert returned null. Fixed: toggle aborts when status would change and convert is missing (`cannotApplyChargeToggle`). Independent Reviewer re-reviewed and **APPROVED**. Waiting for owner completion.
+Independent Reviewer **APPROVED**. Live TV2–TV4 walkthrough was not run. Waiting for owner completion.
