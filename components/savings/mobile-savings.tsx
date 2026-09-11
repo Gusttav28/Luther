@@ -16,7 +16,6 @@ export function MobileSavings({
   leftoverMinor,
   lifetimeTakeMinor,
   postLifetimeMinor,
-  plannedSalaryTakeMinor,
   savingsTrend,
   contributionsTotal,
   withdrawalsTotal,
@@ -30,7 +29,6 @@ export function MobileSavings({
   leftoverMinor: number | null;
   lifetimeTakeMinor: number | null;
   postLifetimeMinor: number | null;
-  plannedSalaryTakeMinor: number | null;
   savingsTrend: Array<{ label: string; contributions: number; withdrawals: number }>;
   contributionsTotal: number;
   withdrawalsTotal: number;
@@ -62,7 +60,7 @@ export function MobileSavings({
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
-              Budget left
+              Leftover after planned
             </p>
             <p className="mt-1 text-[22px] font-bold tabular-nums tracking-tight text-ink">
               <Money minor={leftoverMinor} currency={currency} />
@@ -70,7 +68,7 @@ export function MobileSavings({
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
-              Lifetime take (70%)
+              This month (70%)
             </p>
             <p className="mt-1 text-[22px] font-bold tabular-nums tracking-tight text-ink">
               <Money minor={lifetimeTakeMinor} currency={currency} />
@@ -84,21 +82,12 @@ export function MobileSavings({
               <Money minor={postLifetimeMinor} currency={currency} />
             </p>
           </div>
-          <div className="col-span-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
-              From planned salary
-            </p>
-            <p className="mt-1 text-[22px] font-bold tabular-nums tracking-tight text-ink">
-              <Money minor={plannedSalaryTakeMinor} currency={currency} />
-            </p>
-          </div>
         </div>
         <p className="mt-4 border-t border-line pt-3.5 text-[12.5px] leading-relaxed text-ink-muted">
-          Lifetime savings are always{" "}
-          <strong className="font-semibold text-ink">70%</strong> of what remains after charged and
-          upcoming (Planning) bills from salary you have already received.{" "}
-          <strong className="font-semibold text-ink">From planned salary</strong> is the extra take
-          if planned pay arrives. The form below is for manual corrections or withdrawals only.
+          This month’s take is{" "}
+          <strong className="font-semibold text-ink">70%</strong> of Main after remaining planned
+          expenses. If those bills cover Main, nothing is saved. The form below is for manual
+          corrections or withdrawals only.
         </p>
       </section>
 

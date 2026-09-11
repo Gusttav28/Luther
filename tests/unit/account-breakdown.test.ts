@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { savingsCardHeadline } from "@/lib/queries/balance-months";
 import {
   computeWaterfall,
   leftoverAfterPlannedBills,
@@ -24,6 +25,15 @@ describe("savings month breakdown (Main leftover take)", () => {
       remainingPlanningMinor: 120_000,
     }).lifetimeTakeMinor;
     expect(take).toBe(0);
+  });
+
+  it("Balance Savings headline is leftover take, not opening plus lifetime", () => {
+    const take = computeWaterfall({
+      mainCashMinor: 100_000,
+      remainingPlanningMinor: 40_000,
+    }).lifetimeTakeMinor;
+    expect(savingsCardHeadline(take)).toBe(42_000);
+    expect(savingsCardHeadline(take)).not.toBe(0 + 250_000);
   });
 
   it("null legs stay null and do not coerce to 0", () => {

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency } from "@/lib/money";
 import { getBalanceSeries } from "@/lib/queries/balance";
 import { getLifetimeSavingsBalance } from "@/lib/queries/overview";
+import { savingsCardHeadline } from "@/lib/queries/balance-months";
 import { getScopeAmounts, waterfallFromScope } from "@/lib/queries/waterfall-scope";
 import { savingsMonthBreakdownFromTakes } from "@/lib/waterfall";
 import type { AppSettings } from "@/lib/queries/settings";
@@ -183,15 +184,6 @@ export async function getBalanceAccountsPage(
     getCurrentMonthBreakdown(userId, settings),
   ]);
 
-  const savingsRow = rows.find((r) => r.kind === "SAVINGS") ?? null;
-  const savingsAllTime = await getSavingsAllTimeMinor(
-    userId,
-    settings,
-    savingsRow
-      ? { openingMinor: savingsRow.openingMinor, currency: savingsRow.currency }
-      : null
-  );
-
   const kindOrder: Record<AccountKind, number> = { MAIN: 0, SAVINGS: 1, CUSTOM: 2 };
   const accounts: BalanceAccountView[] = rows
     .map((row) => {
@@ -200,7 +192,7 @@ export async function getBalanceAccountsPage(
         // Card shows the opening the owner entered (same currency as saved).
         balanceMinor = row.openingMinor;
       } else if (row.kind === "SAVINGS") {
-        balanceMinor = savingsAllTime;
+        balanceMinor = savingsCardHeadline(month.breakdown.fromMain);
       } else {
         balanceMinor = customBalanceMinor(
           row.openingMinor,
