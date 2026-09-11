@@ -1,19 +1,31 @@
-# Current specification progress
+# Current implementation progress
 
 - Work item: balance-savings-consistency (`specs/balance-savings-consistency/`)
 - Branch: `cursor/balance-savings-consistency-ef43`
 - Spec package: 2026-09-11
-- Spec Author session: 2026-09-11
-- Handoff: **SPEC_READY**
+- Human approval: **GO** 2026-09-11
+- Handoff: **IMPLEMENTED**
 
 ## Outcome
 
-Savings leftover take is the same number on Overview, Balance, and Savings. Creating a Savings account does not show opening + lifetime as the card. Balance Accounts sit at the top. Half-month running table is gone. A month table compares Spent vs Saved.
+Balance and Overview Savings headlines are this month’s leftover take. Creating Savings no longer shows opening + lifetime. Savings page leftover/take uses Main − remaining Planning; From planned salary is gone. Balance Accounts sit at the top. Half-month running table/charts are gone. Month table compares Spent vs Saved (newest first).
 
-## Prior item
+## Tasks
 
-`main-cash-planned-savings` was merged (PR #3). This is a new governed item.
+- T1 Balance Savings headline = leftover take
+- T2 Savings page leftover copy; drop From planned salary
+- T3 Accounts first on Balance
+- T4 Remove half-month running UI
+- T5 Month Spent / Saved table
+- T6 Tests
+- T7 this handoff
 
-## Notes for the owner
+## Verification
 
-Waiting for owner **GO** before implementation.
+- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 56 passed.
+- TV2–TV4: not run against a live household in this environment (no owner session).
+- TV5: no new npm packages or Prisma models; month loader and account queries stay `userId`-scoped; leftover still omits charged.
+
+## Notes
+
+Independent Reviewer should confirm Balance Savings is not `getSavingsAllTimeMinor` and that Accounts render above Starting/Current.
