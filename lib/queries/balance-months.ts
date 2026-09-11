@@ -47,8 +47,16 @@ export function composeMonthSpendSaveRows(input: {
   for (const key of keys) {
     const { year, month } = parseMonthKey(key);
     const isCurrent = year === input.currentYear && month === input.currentMonth;
-    const spentMinor = input.spentByKey[key] ?? (isCurrent ? 0 : undefined);
-    const savedMinor = isCurrent ? input.currentTake : (input.savedByKey[key] ?? 0);
+    const spentMinor = Object.hasOwn(input.spentByKey, key)
+      ? input.spentByKey[key]
+      : isCurrent
+        ? 0
+        : undefined;
+    const savedMinor = isCurrent
+      ? input.currentTake
+      : Object.hasOwn(input.savedByKey, key)
+        ? input.savedByKey[key]
+        : 0;
 
     const spentListed = spentMinor === null || (spentMinor !== undefined && spentMinor !== 0);
     const savedListed = savedMinor === null || savedMinor !== 0;
