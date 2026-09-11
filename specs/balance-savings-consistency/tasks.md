@@ -38,6 +38,11 @@
   - Preconditions: T1, T5
   - Expected evidence: Spent/saved composition tests; no test asserts Balance Savings = opening + lifetime.
 
+- [ ] T8 — Remove Starting/Current; current-month Spent = Overview charged sum
+  - Files: `app/(app)/balance/page.tsx`, `components/balance/mobile-balance.tsx`, `lib/queries/balance-months.ts`
+  - Requirements: R5, R7
+  - Expected evidence: No Starting/Current cards. Current month always listed. Spent uses `expensesForScope` (Already charged).
+
 - [ ] T7 — `progress/current.md` handoff **IMPLEMENTED**
   - Files: `progress/current.md`
   - Requirements: — (process)

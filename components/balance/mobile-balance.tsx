@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Money } from "@/components/money";
 import { BarChart } from "@/components/charts/bar-chart";
@@ -16,8 +15,6 @@ const PERIOD_INK = "text-[#141715] dark:text-ink";
 
 export function MobileBalance({
   currency,
-  startingBalance,
-  currentBalance,
   monthRows,
   chartRows,
   accounts,
@@ -30,8 +27,6 @@ export function MobileBalance({
   startingOpeningCurrency,
 }: {
   currency: Currency;
-  startingBalance: number | null;
-  currentBalance: number | null;
   monthRows: MonthSpendSaveRow[];
   chartRows: Array<{
     label: string;
@@ -48,7 +43,6 @@ export function MobileBalance({
   startingOpeningCurrency: Currency;
 }) {
   const [addOpen, setAddOpen] = useState(false);
-  const currentNegative = currentBalance !== null && currentBalance < 0;
   const emptyMessage = "No spent or saved months yet.";
 
   return (
@@ -73,8 +67,7 @@ export function MobileBalance({
         </div>
         {accounts.length === 0 ? (
           <p className="rounded-[14px] bg-[#f6f7f5] px-3.5 py-3.5 text-sm text-ink-faint dark:bg-surface-muted">
-            Create a Main, Savings, or Custom account. Starting and current totals below stay
-            total cash.
+            Create a Main, Savings, or Custom account.
           </p>
         ) : (
           <AccountCards
@@ -88,42 +81,9 @@ export function MobileBalance({
         )}
       </section>
 
-      <section className="card !rounded-[20px]" aria-label="Balance summary">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.05em] text-ink-muted">
-              Starting balance
-            </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-ink">
-              <Money minor={startingBalance} currency={currency} />
-            </p>
-            <Link
-              href="/settings"
-              className="mt-1 inline-block text-xs font-semibold text-brand-700 dark:text-brand-300"
-            >
-              Edit
-            </Link>
-          </div>
-          <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.05em] text-ink-muted">
-              Current balance
-            </p>
-            <p
-              className={`mt-1 text-xl font-bold tabular-nums ${
-                currentNegative
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-ink"
-              }`}
-            >
-              <Money minor={currentBalance} currency={currency} />
-            </p>
-          </div>
-        </div>
-      </section>
-
       <section className="card !rounded-[20px]">
         <h2 className="section-title">Spent versus saved</h2>
-        <p className="mt-1 mb-3 text-xs text-ink-muted">Charged expenses and leftover take by month</p>
+        <p className="mt-1 mb-3 text-xs text-ink-muted">Already charged expenses and leftover take by month</p>
         <BarChart
           title="Spent versus saved"
           data={chartRows}

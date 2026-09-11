@@ -4,7 +4,7 @@
 - Outcome: The Savings amount is the same leftover take on Overview, Balance, and Savings. Creating a Savings account does not invent a lifetime lump. Balance puts accounts first and replaces the half-month running table with a month-by-month spent vs saved compare.
 - Branch: cursor/balance-savings-consistency-ef43
 - Status: Specification
-- Spec version: 2026-09-11
+- Spec version: 2026-09-11 (amended same day: remove Starting/Current; Spent matches Overview charged)
 
 ## Problem
 
@@ -31,14 +31,13 @@ Creating a Savings account on Balance shows a large number that is **opening + a
 - Bank sync.
 - Changing Custom account math.
 - Removing the Savings page history list or manual contribution form.
-- Removing Starting/Current summary cards (they stay, **below** Accounts).
 - New `/accounts` route.
 
 ## Definitions
 
 - **Leftover take (this month)**: `lifetimeTake = floor(70% of max(0, mainCash − remainingPlanning))` from `main-cash-planned-savings`.
 - **Savings card amount**: that leftover take for the current calendar month. Same on Overview and Balance.
-- **Spent (month)**: converted sum of `Expense.completed === true` in that calendar month.
+- **Spent (month)**: converted sum of Already charged expenses (`completed === true`) in that calendar month — the same number Overview **Spent** uses for that month. Planning rows are excluded. When an expense is marked Already charged, this month’s Spent rises by that amount.
 - **Saved (month)**: leftover take for that month. Current month = live leftover take. Past months = sum of `SavingsContribution` `source = waterfall` for that year/month (H1+H2).
 - **Accounts square**: the Accounts section (Main / Savings / Custom cards + add).
 
@@ -67,8 +66,8 @@ Creating a Savings account on Balance shows a large number that is **opening + a
 ### R3 — Accounts section is at the top of Balance
 
 - Trigger: Owner opens `/balance` (desktop and mobile).
-- Expected response: After the page title, the first block is **Accounts** (cards + add). Starting/Current and remaining analytics sit **below**.
-- Visible/resulting evidence: Accounts cards appear before Starting balance, Current balance, charts, and the month table.
+- Expected response: After the page title, the first block is **Accounts** (cards + add). The month compare sits below Accounts. There is no Starting/Current square.
+- Visible/resulting evidence: Accounts cards appear before the Spent vs Saved chart and table.
 - Acceptance evidence: `app/(app)/balance/page.tsx`, `components/balance/mobile-balance.tsx` order.
 
 ### R4 — Remove half-month running table
@@ -81,9 +80,9 @@ Creating a Savings account on Balance shows a large number that is **opening + a
 ### R5 — Month compare table: spent vs saved
 
 - Trigger: Balance after Accounts (and after Starting/Current if those remain).
-- Expected response: A table (desktop) / list (mobile) of calendar months that have spend or a leftover take, newest first or chronological — pick one and keep it. Columns: **Month**, **Spent**, **Saved**. Spent = charged that month. Saved = leftover take for that month (R1 definition). Empty: “No spent or saved months yet.”
-- State change: None (read of expenses + waterfall / leftover).
-- Visible/resulting evidence: August spent X, saved Y; September spent X, saved Y. Not a running cash total. Not half-month.
+- Expected response: A table (desktop) / list (mobile) of calendar months, newest first. Always include the current month. Columns: **Month**, **Spent**, **Saved**. Spent = Already charged that month (same source as Overview Spent for that month). Saved = leftover take for that month (R1 definition). Empty (no months at all): “No spent or saved months yet.”
+- State change: None (read of expenses + waterfall / leftover). Charge/un-charge revalidates `/balance` so Spent updates.
+- Visible/resulting evidence: Charge ₡10,000 → this month’s Spent on Balance equals Overview Spent for that month. August spent X, saved Y.
 - Failure behavior: Missing FX on a row → that cell null / “—”.
 - Acceptance evidence: New helper + unit tests (charged 10_000 and take 42_000 in one month → spent 10_000, saved 42_000). Manual: table matches leftover take for the current month.
 
@@ -92,6 +91,13 @@ Creating a Savings account on Balance shows a large number that is **opening + a
 - Trigger: All new/changed loaders.
 - Expected response: `requireUserId`; `userId` on queries; no secrets; `package.json` unchanged; no new Prisma models.
 - Acceptance evidence: Diff review.
+
+### R7 — Remove Starting and Current balance cards
+
+- Trigger: Owner opens `/balance` (desktop and mobile).
+- Expected response: No Starting balance / Current balance square. `getBalanceSeries` is not required on this page.
+- Visible/resulting evidence: Grep Balance page/mobile: no “Starting balance” or “Current balance” labels.
+- Acceptance evidence: `page.tsx` and `mobile-balance.tsx`.
 
 ## Traceability
 
@@ -102,12 +108,14 @@ Creating a Savings account on Balance shows a large number that is **opening + a
 | Move accounts square to the top | R3 |
 | Remove running by half-month table | R4 |
 | Month compare: spent this / saved this | R5 |
+| Spent updates when Already charged (like Overview) | R5 |
+| Remove Starting/Current square | R7 |
 | Security / no new packages | R6 |
 
 ## Assumptions
 
 - Current-month Saved uses the live leftover take (same as the cards). Past months use already-materialized waterfall rows for that month (sum H1+H2).
-- Starting/Current cards stay below Accounts; they are not the month table.
+- Starting/Current cards are removed (R7). Main opening remains on the Accounts card.
 - Custom accounts stay on the Accounts grid; leftover hint on Custom is unchanged.
 
 ## Open questions
