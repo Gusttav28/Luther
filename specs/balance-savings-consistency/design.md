@@ -15,8 +15,8 @@
 - Overview Savings (`getDerivedAccounts`) already uses `waterfallFromScope` leftover take. Balance Savings (`getBalanceAccountsPage`) sets `balanceMinor` to `getSavingsAllTimeMinor` (opening + lifetime `SavingsContribution`). Creating Savings with opening 0 still shows the lifetime lump — that is the “amount from somewhere.”
 - `getCurrentMonthBreakdown` already has the month take (`fromMain`) but the card headline ignores it.
 - Savings page `getSavings` leftover/take now come from `waterfallFromScope` (Main − Planning) after `main-cash-planned-savings`, but UI still shows **From planned salary** and copy about received salary leftover (`plannedTakeFromScope`).
-- Balance desktop: title → Starting/Current → running line + income/expense half-month bars → half-month table → Accounts. Mobile: same order, accordion instead of table.
-- `getBalanceSeries` is half-month running cash (starting + received − charged). Still used for Starting/Current. Keep the query for those two cards only; do not render series rows.
+- Balance desktop/mobile: title → Accounts → Spent vs Saved chart + month table. Starting/Current cards are removed (R7).
+- `getBalanceSeries` is not used on Balance. Current-month Spent uses `expensesForScope` (same Already charged month sum as Overview Spent).
 
 ## Files to change
 
@@ -26,8 +26,8 @@
 | `lib/queries/savings.ts` | Stop exposing `plannedSalaryTakeMinor` (or leave unused). Leftover/take already from `waterfallFromScope`. | R2 |
 | `app/(app)/savings/page.tsx` | Remove From planned salary card and received-salary leftover copy. 70% take = leftover take. | R2 |
 | `components/savings/mobile-savings.tsx` | Same: drop From planned salary; copy = Main after remaining Planning. | R2 |
-| `app/(app)/balance/page.tsx` | Accounts section first. Drop half-month table, running line chart, half-month bar chart. Render month Spent/Saved table. Keep Starting/Current below Accounts. | R3, R4, R5 |
-| `components/balance/mobile-balance.tsx` | Accounts first. Drop running chart, half-month bars, accordion. Month list Spent/Saved. Starting/Current below Accounts. | R3, R4, R5 |
+| `app/(app)/balance/page.tsx` | Accounts first. No Starting/Current. Month Spent/Saved table and chart. | R3, R4, R5, R7 |
+| `components/balance/mobile-balance.tsx` | Accounts first. No Starting/Current. Month list Spent/Saved. | R3, R4, R5, R7 |
 | `components/balance/account-section.tsx` | Headline for Savings is `balanceMinor` (now the take). Keep the this-month / leftover-after-save lines or drop duplicates if the headline is already the take. | R1 |
 | `lib/queries/balance-months.ts` (new) or `lib/queries/balance.ts` | Helper: list calendar months with `spentMinor` and `savedMinor`. Spent from charged expenses; saved from month leftover / waterfall sum. `userId` scoped. | R5 |
 | `tests/unit/balance-months.test.ts` (new) | Pure composition: spent + saved row; current-month saved = leftover take. | R5 |
@@ -63,7 +63,7 @@ saved  = current month ? live take
 
 Include a month if spent ≠ 0 or saved ≠ 0 (or conversion null that should still list). Sort chronological ascending or newest first — implement newest first (owner compares recent months first).
 
-Starting/Current: still `getBalanceSeries` totals only; do not render `series.rows`.
+Current-month Spent is `expensesForScope(..., BOTH)` so it matches Overview Spent when that month is selected. The current month always appears in the table so a new charge is visible.
 
 ## Validation and failure handling
 
@@ -90,7 +90,7 @@ No new npm packages. No Prisma models. Reuse `waterfallFromScope`, `percentOf`, 
 | Keep Balance Savings = opening + lifetime | **Rejected** | Owner: creating Savings shows an amount “from somewhere.” |
 | Recompute past-month leftover from today’s Main | **Rejected** | Today’s Main already dropped with charges; would rewrite August when September is charged. |
 | Keep half-month table under the new table | **Rejected** | Owner does not use it. |
-| Remove Starting/Current | **Rejected for this item** | Not asked; only the half-month table/charts. |
+| Keep Starting/Current | **Rejected (amendment)** | Owner: remove that square. |
 | Overview Savings becomes lifetime | **Rejected** | Leftover take on Overview is already correct. |
 
 ## Requirement mapping
@@ -103,3 +103,4 @@ No new npm packages. No Prisma models. Reuse `waterfallFromScope`, `percentOf`, 
 | R4 | Remove table/chart/accordion |
 | R5 | Month helper + Balance table/list |
 | R6 | userId; no new deps/schema |
+| R7 | Starting/Current cards removed |

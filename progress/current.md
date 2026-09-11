@@ -4,8 +4,8 @@
 - Branch: `cursor/balance-savings-consistency-ef43`
 - Spec package: 2026-09-11
 - Human approval: **GO** 2026-09-11
-- Handoff: **IMPLEMENTED**
-- Review: **APPROVED** (`reviews/balance-savings-consistency/review.md`)
+- Handoff: **IMPLEMENTED** (amendment in progress: remove Starting/Current; Spent = Overview charged)
+- Review: prior **APPROVED**; re-review needed after this amendment
 
 ## Outcome
 
