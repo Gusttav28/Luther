@@ -63,7 +63,7 @@ describe("month spent vs saved rows", () => {
     expect(august?.savedMinor).toBe(14_000);
   });
 
-  it("sorts newest month first and skips empty current month", () => {
+  it("sorts newest month first and always includes the current month", () => {
     const rows = composeMonthSpendSaveRows({
       spentByKey: {
         [monthKey(2026, 7)]: 1_000,
@@ -77,7 +77,20 @@ describe("month spent vs saved rows", () => {
       currentMonth: 9,
       currentTake: 0,
     });
-    expect(rows.map((row) => row.month)).toEqual([8, 7]);
+    expect(rows.map((row) => row.month)).toEqual([9, 8, 7]);
+    expect(rows[0]?.spentMinor).toBe(0);
+    expect(rows[0]?.savedMinor).toBe(0);
+  });
+
+  it("current-month Spent uses the Already charged sum (Overview Spent)", () => {
+    const rows = composeMonthSpendSaveRows({
+      spentByKey: { [monthKey(2026, 9)]: 10_000 },
+      savedByKey: {},
+      currentYear: 2026,
+      currentMonth: 9,
+      currentTake: 0,
+    });
+    expect(rows[0]?.spentMinor).toBe(10_000);
   });
 
   it("keeps a null spent cell instead of coercing to 0", () => {
@@ -88,7 +101,8 @@ describe("month spent vs saved rows", () => {
       currentMonth: 9,
       currentTake: 0,
     });
-    expect(rows[0]?.spentMinor).toBeNull();
-    expect(rows[0]?.savedMinor).toBe(1_000);
+    const august = rows.find((row) => row.month === 8);
+    expect(august?.spentMinor).toBeNull();
+    expect(august?.savedMinor).toBe(1_000);
   });
 });

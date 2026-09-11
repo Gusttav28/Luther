@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { sumInCurrency, type Currency } from "@/lib/money";
 import { monthName } from "@/lib/periods";
-import { getScopeAmounts, waterfallFromScope } from "@/lib/queries/waterfall-scope";
+import {
+  expensesForScope,
+  getScopeAmounts,
+  waterfallFromScope,
+} from "@/lib/queries/waterfall-scope";
 import type { AppSettings } from "@/lib/queries/settings";
 
 export interface MonthSpendSaveRow {
@@ -60,7 +64,7 @@ export function composeMonthSpendSaveRows(input: {
 
     const spentListed = spentMinor === null || (spentMinor !== undefined && spentMinor !== 0);
     const savedListed = savedMinor === null || savedMinor !== 0;
-    if (!spentListed && !savedListed) continue;
+    if (!isCurrent && !spentListed && !savedListed) continue;
 
     rows.push({
       year,
@@ -96,7 +100,7 @@ export async function getBalanceMonthRows(
   const currentMonth = now.getMonth() + 1;
   const { reportingCurrency: reporting, rates } = settings;
 
-  const [expenses, waterfall, scope] = await Promise.all([
+  const [expenses, waterfall, scope, currentSpent] = await Promise.all([
     prisma.expense.findMany({
       where: { userId, completed: true },
       select: { amountMinor: true, currency: true, date: true },
@@ -106,6 +110,7 @@ export async function getBalanceMonthRows(
       select: { amountMinor: true, currency: true, year: true, month: true, date: true },
     }),
     getScopeAmounts(userId, currentYear, currentMonth, "BOTH", reporting, rates),
+    expensesForScope(userId, currentYear, currentMonth, "BOTH", reporting, rates),
   ]);
 
   const spentGroups = new Map<string, Array<{ amountMinor: number; currency: Currency }>>();
@@ -133,8 +138,10 @@ export async function getBalanceMonthRows(
   }
 
   const wf = waterfallFromScope(scope);
+  const spentByKey = groupSum(spentGroups, reporting, rates);
+  spentByKey[monthKey(currentYear, currentMonth)] = currentSpent;
   return composeMonthSpendSaveRows({
-    spentByKey: groupSum(spentGroups, reporting, rates),
+    spentByKey,
     savedByKey: groupSum(savedGroups, reporting, rates),
     currentYear,
     currentMonth,

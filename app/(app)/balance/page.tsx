@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/settings";
-import { getBalanceSeries } from "@/lib/queries/balance";
 import { getBalanceAccountsPage } from "@/lib/queries/accounts";
 import { getBalanceMonthRows } from "@/lib/queries/balance-months";
 import { Money, RatesNote } from "@/components/money";
@@ -15,8 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function BalancePage() {
   const userId = await requireUserId();
   const settings = await getSettings(userId);
-  const [series, accountsPage, monthRows] = await Promise.all([
-    getBalanceSeries(userId, settings),
+  const [accountsPage, monthRows] = await Promise.all([
     getBalanceAccountsPage(userId, settings),
     getBalanceMonthRows(userId, settings),
   ]);
@@ -32,8 +29,6 @@ export default async function BalancePage() {
     <div className="mx-auto max-w-7xl">
       <MobileBalance
         currency={settings.reportingCurrency}
-        startingBalance={series.startingBalance}
-        currentBalance={series.currentBalance}
         monthRows={monthRows}
         chartRows={chartRows}
         accounts={accountsPage.accounts}
@@ -57,8 +52,7 @@ export default async function BalancePage() {
             <h2 className="text-base font-semibold">Accounts</h2>
             {accountsPage.accounts.length === 0 ? (
               <p className="mt-1 text-sm text-ink-muted">
-                Create a Main, Savings, or Custom account. Starting and current totals below stay
-                total cash.
+                Create a Main, Savings, or Custom account.
               </p>
             ) : null}
           </div>
@@ -79,28 +73,10 @@ export default async function BalancePage() {
           />
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2" aria-label="Balance summary">
-          <div className="card">
-            <p className="field-label">Starting balance</p>
-            <p className="text-xl font-bold tabular-nums">
-              <Money minor={series.startingBalance} currency={settings.reportingCurrency} />
-            </p>
-            <Link href="/settings" className="mt-1 inline-block text-xs text-brand-accent underline">
-              Edit in settings
-            </Link>
-          </div>
-          <div className="card ring-1 ring-brand-100 dark:ring-white/20">
-            <p className="field-label">Current balance</p>
-            <p className="text-2xl font-bold tabular-nums text-brand-accent">
-              <Money minor={series.currentBalance} currency={settings.reportingCurrency} />
-            </p>
-          </div>
-        </section>
-
         <section className="grid min-w-0 gap-4" aria-label="Spent versus saved">
           <BarChart
             title="Spent versus saved"
-            subtitle="Charged expenses and leftover take by calendar month."
+            subtitle="Already charged expenses and leftover take by calendar month."
             data={chartRows}
             series={[
               { key: "spent", name: "Spent", color: "#737373" },
