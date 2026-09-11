@@ -1,34 +1,19 @@
-# Current implementation progress
+# Current specification progress
 
-- Work item: main-cash-planned-savings (`specs/main-cash-planned-savings/`)
-- Branch: `cursor/main-cash-planned-savings-ef43`
-- Spec package: 2026-09-09 (amended same day: Already charged reduces Main)
-- Human approval: **GO** 2026-09-09
-- Handoff: **IMPLEMENTED**
-- Review: **APPROVED** (`reviews/main-cash-planned-savings/review.md`, re-review after `4adcc89`)
+- Work item: balance-savings-consistency (`specs/balance-savings-consistency/`)
+- Branch: `cursor/balance-savings-consistency-ef43`
+- Spec package: 2026-09-11
+- Spec Author session: 2026-09-11
+- Handoff: **SPEC_READY**
 
 ## Outcome
 
-Overview Main is stored Main cash. Charging an expense subtracts from Main (`7_323_300 − 1_000_000 → 6_323_300`). Leftover is `max(0, current Main − remaining Planning)`; 70% of leftover is the month take (H1 waterfall row; H2 is 0). Overview cards: Main, Savings (month take), Planned expenses.
+Savings leftover take is the same number on Overview, Balance, and Savings. Creating a Savings account does not show opening + lifetime as the card. Balance Accounts sit at the top. Half-month running table is gone. A month table compares Spent vs Saved.
 
-## Tasks
+## Prior item
 
-- T1 leftover helper + waterfall tests
-- T2 scope + materialize once per month
-- T3 Overview loaders
-- T4 Overview UI cards
-- T5 Balance Savings month lines
-- T6 leftover-encoding tests
-- T8 charge/un-charge applies converted delta to Main
-- T7 this handoff
+`main-cash-planned-savings` was merged (PR #3). This is a new governed item.
 
-## Verification
+## Notes for the owner
 
-- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 48 passed (waterfall, breakdown, main-cash, overview-dashboard, validation).
-- TV2: default `vitest.config.ts` aggregations **skipped** — Postgres at `127.0.0.1:5432` unreachable (`P1001`).
-- TV3–TV5: not run against a live household in this environment (no owner session / seed of ₡73,233).
-- TV6: leftover helper has two inputs (Main, Planning); charged not subtracted again; no new npm packages or Prisma models; expense Main writes scoped by `userId` + `kind = MAIN`.
-
-## Notes
-
-Independent Reviewer first verdict was **CHANGES_REQUESTED** (`reviews/main-cash-planned-savings/review.md`): `setExpenseCompletedAction` persisted a charge when convert returned null. Fixed: toggle aborts when status would change and convert is missing (`cannotApplyChargeToggle`). Independent Reviewer re-reviewed and **APPROVED**. Waiting for owner completion.
+Waiting for owner **GO** before implementation.
