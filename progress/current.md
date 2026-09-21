@@ -6,6 +6,7 @@
 - Human approval: owner **GO** 2026-09-21 (“Let’s work on this screen now”; leftover-covered display locked)
 - Implementer session: 2026-09-21
 - Handoff: **IMPLEMENTED**
+- Review: **APPROVED** (`reviews/project-leftover-covered/review.md`); TV2–TV3 owner/browser still open
 
 ## Outcome
 
