@@ -528,7 +528,7 @@ export function ProjectCard({
                 {project.goalDate ? ` · Goal ${goalDateInputValue(project.goalDate)}` : ""}
               </p>
               <p className="text-sm text-ink-muted">
-                Saved: <Money minor={project.savedMinor} currency={project.currency} />
+                Covered: <Money minor={project.savedMinor} currency={project.currency} />
                 {project.expectedTakeMinor !== null && (
                   <>
                     {" "}
@@ -563,7 +563,7 @@ export function ProjectCard({
               />
             </div>
             <p className="mt-1 text-xs text-ink-faint">
-              {project.fundedPercent === null ? "—" : `${project.fundedPercent}% funded`}
+              {project.fundedPercent === null ? "—" : `${project.fundedPercent}% covered`}
             </p>
           </div>
 

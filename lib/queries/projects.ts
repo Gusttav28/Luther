@@ -2,11 +2,11 @@ import { prisma } from "@/lib/prisma";
 import {
   convertMinor,
   MissingRateError,
-  sumInCurrency,
   type Currency,
   type Rates,
 } from "@/lib/money";
 import { currentPeriod, nextPeriod, type PeriodRef } from "@/lib/periods";
+import { leftoverProjectCovered } from "@/lib/project-covered";
 import { projectAffordability } from "@/lib/projections";
 import { type PeriodMode } from "@/lib/waterfall";
 import { getScopeAmounts, materializeMonthWaterfall, waterfallFromScope } from "@/lib/queries/waterfall-scope";
@@ -24,11 +24,12 @@ export interface ProjectView {
   link: string | null;
   isPriority: boolean;
   completedAt: Date | null;
+  /** Leftover project take in the project currency, capped at cost. */
   savedMinor: number | null;
   fundedPercent: number | null;
   affordablePeriod: PeriodRef | null;
   affordableNow: boolean;
-  /** Expected take this period from waterfall (priority only). */
+  /** Expected take this period from waterfall (active priority only), reporting currency. */
   expectedTakeMinor: number | null;
 }
 
@@ -37,6 +38,31 @@ export interface ProjectsView {
   /** Post-lifetime leftover for current month (BOTH), reporting currency. */
   postLifetimeMinor: number | null;
   projectionPossible: boolean;
+}
+
+function leftoverTakeReporting(
+  project: { isPriority: boolean; completedAt: Date | null; allocationPercent: number },
+  monthScope: Parameters<typeof waterfallFromScope>[0],
+  monthWaterfall: ReturnType<typeof waterfallFromScope>
+): number | null {
+  if (!monthWaterfall) return null;
+  if (!project.isPriority || project.completedAt) return 0;
+  return waterfallFromScope(monthScope, project.allocationPercent)?.projectTakeMinor ?? 0;
+}
+
+function takeInProjectCurrency(
+  takeReporting: number | null,
+  reporting: Currency,
+  projectCurrency: Currency,
+  rates: Rates
+): number | null {
+  if (takeReporting === null) return null;
+  try {
+    return convertMinor(takeReporting, reporting, projectCurrency, rates);
+  } catch (error) {
+    if (error instanceof MissingRateError) return null;
+    throw error;
+  }
 }
 
 export async function getProjectsView(
@@ -52,15 +78,10 @@ export async function getProjectsView(
     await materializeMonthWaterfall(userId, year, month, settings.reportingCurrency, rates);
   }
 
-  const [projects, contributionSums, monthScope] = await Promise.all([
+  const [projects, monthScope] = await Promise.all([
     prisma.project.findMany({
       where: { userId },
       orderBy: [{ isPriority: "desc" }, { priority: "asc" }],
-    }),
-    prisma.projectContribution.groupBy({
-      by: ["projectId", "currency"],
-      where: { userId },
-      _sum: { amountMinor: true },
     }),
     getScopeAmounts(userId, year, month, "BOTH", settings.reportingCurrency, rates),
   ]);
@@ -70,7 +91,7 @@ export async function getProjectsView(
   const priority = projects.find((p) => p.isPriority && !p.completedAt);
   const allocationPerPeriod =
     priority && monthWaterfall
-      ? waterfallFromScope(monthScope, priority.allocationPercent)?.projectTakeMinor ?? 0
+      ? leftoverTakeReporting(priority, monthScope, monthWaterfall) ?? 0
       : 0;
   // BOTH mode: treat monthly take as ~2 halves for projection step size
   const perHalf =
@@ -80,31 +101,10 @@ export async function getProjectsView(
   const inputs: Array<{ id: string; costMinor: number; savedMinor: number; priority: number }> = [];
   let conversionFailed = false;
 
-  const rowsByProject = new Map<string, Array<{ amountMinor: number; currency: Currency }>>();
-  for (const row of contributionSums) {
-    const list = rowsByProject.get(row.projectId) ?? [];
-    list.push({
-      amountMinor: row._sum.amountMinor ?? 0,
-      currency: row.currency as Currency,
-    });
-    rowsByProject.set(row.projectId, list);
-  }
-
-  const savedByProject = new Map<string, number | null>();
-  for (const project of projects) {
-    const own = sumInCurrency(
-      rowsByProject.get(project.id) ?? [],
-      project.currency as Currency,
-      rates
-    );
-    savedByProject.set(project.id, own);
-  }
-
-  // Only simulate the priority project for affordability
-  if (priority) {
+  if (priority && monthWaterfall) {
     try {
       const cost = convertMinor(priority.costMinor, priority.currency as Currency, common, rates);
-      const saved = sumInCurrency(rowsByProject.get(priority.id) ?? [], common, rates);
+      const saved = leftoverTakeReporting(priority, monthScope, monthWaterfall);
       if (saved === null) throw new MissingRateError();
       inputs.push({ id: priority.id, costMinor: cost, savedMinor: saved, priority: 1 });
     } catch (error) {
@@ -120,17 +120,20 @@ export async function getProjectsView(
   const projectionById = new Map(projections.map((p) => [p.id, p]));
 
   const views: ProjectView[] = projects.map((project) => {
-    const saved = savedByProject.get(project.id) ?? null;
+    const takeReporting = leftoverTakeReporting(project, monthScope, monthWaterfall);
+    const takeInProject = takeInProjectCurrency(
+      takeReporting,
+      common,
+      project.currency as Currency,
+      rates
+    );
+    const covered = leftoverProjectCovered({
+      costMinor: project.costMinor,
+      takeMinor: takeInProject,
+    });
     const projection = projectionById.get(project.id);
-    const fundedPercent =
-      saved === null || project.costMinor === 0
-        ? null
-        : Math.min(100, Math.round((saved / project.costMinor) * 100));
-    const affordableNow = fundedPercent !== null && saved !== null && saved >= project.costMinor;
     const expectedTakeMinor =
-      project.isPriority && monthWaterfall
-        ? waterfallFromScope(monthScope, project.allocationPercent)?.projectTakeMinor ?? null
-        : null;
+      project.isPriority && !project.completedAt && monthWaterfall ? takeReporting : null;
     return {
       id: project.id,
       name: project.name,
@@ -143,10 +146,10 @@ export async function getProjectsView(
       link: project.link,
       isPriority: project.isPriority,
       completedAt: project.completedAt,
-      savedMinor: saved,
-      fundedPercent,
+      savedMinor: covered.coveredMinor,
+      fundedPercent: covered.fundedPercent,
       affordablePeriod: projection?.affordablePeriod ?? null,
-      affordableNow,
+      affordableNow: covered.affordableNow,
       expectedTakeMinor,
     };
   });

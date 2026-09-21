@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     include: [
       "tests/unit/waterfall.test.ts",
+      "tests/unit/project-covered.test.ts",
+      "tests/unit/projections.test.ts",
       "tests/unit/account-breakdown.test.ts",
       "tests/unit/balance-months.test.ts",
       "tests/unit/main-cash.test.ts",

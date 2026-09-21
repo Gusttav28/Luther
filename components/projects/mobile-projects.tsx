@@ -57,7 +57,7 @@ export function MobileProjects({
       <section className="card !rounded-[20px]" aria-label="Funding progress">
         <h2 className="section-title">Funding progress</h2>
         <p className="mt-1 mb-4 text-xs text-ink-muted">
-          Saved percentage by project; currencies not combined
+          Covered percentage by leftover take; currencies not combined
         </p>
         {progressRows.length === 0 ? (
           <p className="rounded-xl bg-surface-muted px-3 py-4 text-sm text-ink-faint">
