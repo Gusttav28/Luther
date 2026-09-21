@@ -27,6 +27,7 @@
 | `components/projects/mobile-projects.tsx` | Funding-progress caption: covered % from leftover, not lifetime saved. | R2 |
 | `components/charts/project-progress-chart.tsx` | Same caption on desktop. | R2 |
 | `tests/unit/project-covered.test.ts` | Helper tests including screenshot numbers and leftover-zero. | R1, R2, R3, R4 |
+| `vitest.waterfall.config.ts` | Include the leftover-covered helper (and projections) in the no-DB suite. | R1–R4 |
 | `progress/current.md` | Implementation log. | — |
 
 ## New files

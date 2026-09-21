@@ -39,7 +39,7 @@ Projects headline, Funding progress, Overview bars, and Affordable now use lefto
 
 ## Verification
 
-- TV1: run after this handoff — `npx vitest run tests/unit/project-covered.test.ts tests/unit/waterfall.test.ts tests/unit/projections.test.ts --config vitest.waterfall.config.ts`
+- TV1: `npx vitest run tests/unit/project-covered.test.ts tests/unit/waterfall.test.ts tests/unit/projections.test.ts --config vitest.waterfall.config.ts` — **19 passed**. `project-covered` and `projections` added to that config include. Other files in the same config still fail to load without `DATABASE_URL` (pre-existing Prisma import); not required for this item.
 - TV2–TV3: owner/browser on a live session (screenshot lock + leftover movement)
 - TV4: no new deps; no schema; `userId` still on project/scope queries
 
