@@ -1,7 +1,8 @@
 /**
  * Pure project-funding projection math (R9), unit-testable without a DB.
  *
- * Past funding comes from recorded ProjectContribution rows (savedMinor).
+ * Past funding (`savedMinor`) is leftover project take for the Projects screen
+ * (same waterfall as Savings), not lifetime ProjectContribution rows.
  * Future periods are simulated: each half-month period the fixed allocation
  * is applied to the highest-priority incomplete project until it is fully
  * funded, then overflow rolls to the next project in the same period.
@@ -12,7 +13,7 @@ export interface ProjectionInput {
   id: string;
   /** Cost in a common currency's minor units (already converted). */
   costMinor: number;
-  /** Recorded contributions to date, same currency. */
+  /** Leftover project take to date for this view, same currency. */
   savedMinor: number;
   /** Lower number = higher priority. */
   priority: number;

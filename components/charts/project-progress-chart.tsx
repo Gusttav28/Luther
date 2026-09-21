@@ -13,7 +13,9 @@ export function ProjectProgressChart({
   return (
     <section className="card min-w-0" aria-label="Project funding progress">
       <h2 className="section-title mb-1">Funding progress</h2>
-      <p className="mb-4 text-xs text-ink-muted">Saved percentage by project; currencies are not combined.</p>
+      <p className="mb-4 text-xs text-ink-muted">
+        Covered percentage by leftover take; currencies are not combined.
+      </p>
       {data.length === 0 ? (
         <div className="flex h-56 items-center justify-center rounded-lg surface-muted text-sm text-ink-faint">
           Funding progress is unavailable until project values can be compared.

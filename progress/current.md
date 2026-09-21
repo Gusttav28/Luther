@@ -1,32 +1,50 @@
 # Current implementation progress
 
-- Work item: balance-savings-consistency (`specs/balance-savings-consistency/`)
-- Branch: `cursor/balance-savings-consistency-ef43`
-- Spec package: 2026-09-11
-- Human approval: **GO** 2026-09-11
-- Handoff: **IMPLEMENTED** (amendment in progress: remove Starting/Current; Spent = Overview charged)
-- Review: prior **APPROVED**; re-review needed after this amendment
+- Work item: project-leftover-covered (`specs/project-leftover-covered/`)
+- Branch: `cursor/project-leftover-covered-ef43`
+- Spec package: 2026-09-21
+- Human approval: owner **GO** 2026-09-21 (“Let’s work on this screen now”; leftover-covered display locked)
+- Implementer session: 2026-09-21
+- Handoff: **IMPLEMENTED**
 
 ## Outcome
 
-Balance and Overview Savings headlines are this month’s leftover take. Creating Savings no longer shows opening + lifetime. Savings page leftover/take uses Main − remaining Planning; From planned salary is gone. Balance Accounts sit at the top. Half-month running table/charts are gone. Month table compares Spent vs Saved (newest first).
+Projects headline, Funding progress, Overview bars, and Affordable now use leftover project take (allocation % of leftover after the 70% savings take). Lifetime `ProjectContribution` sums are not the coverage number.
 
-## Tasks
+## Files read
 
-- T1 Balance Savings headline = leftover take
-- T2 Savings page leftover copy; drop From planned salary
-- T3 Accounts first on Balance
-- T4 Remove half-month running UI
-- T5 Month Spent / Saved table
-- T6 Tests
-- T7 this handoff
+- `AGENTS.md`, `.agents/implementer.md`
+- `specs/project-leftover-covered/{requirements,design,tasks}.md`
+- `lib/queries/projects.ts`, `lib/waterfall.ts`, `lib/queries/waterfall-scope.ts`, project cards / mobile / Overview progress
+
+## Files changed
+
+### T1 — Helper
+
+- `lib/project-covered.ts` — `leftoverProjectCovered`
+- `tests/unit/project-covered.test.ts` — screenshot lock (₡2,417.25 of ₡60,000 → 4%), leftover-zero, take > cost
+
+### T2 — getProjectsView
+
+- `lib/queries/projects.ts` — dropped contribution `groupBy`; `savedMinor` / `fundedPercent` / `affordableNow` from leftover take; projection input is leftover take
+- `lib/projections.ts` — comment: savedMinor is leftover take
+
+### T3 — Copy
+
+- `app/(app)/projects/project-forms.tsx` — Covered label
+- `components/projects/mobile-projects.tsx` — leftover-take caption
+- `components/charts/project-progress-chart.tsx` — leftover-take caption
+
+### T4 — this file
 
 ## Verification
 
-- TV1: `npx vitest run --config vitest.waterfall.config.ts` — 56 passed.
-- TV2–TV4: not run against a live household in this environment (no owner session).
-- TV5: no new npm packages or Prisma models; month loader and account queries stay `userId`-scoped; leftover still omits charged.
+- TV1: run after this handoff — `npx vitest run tests/unit/project-covered.test.ts tests/unit/waterfall.test.ts tests/unit/projections.test.ts --config vitest.waterfall.config.ts`
+- TV2–TV3: owner/browser on a live session (screenshot lock + leftover movement)
+- TV4: no new deps; no schema; `userId` still on project/scope queries
 
-## Notes
+## Notes for Reviewer
 
-Independent Reviewer **APPROVED**. Live TV2–TV4 walkthrough was not run. Waiting for owner completion.
+- `savedMinor` on the view is leftover covered (capped at cost), not lifetime contributions.
+- Expected this month is still leftover take in reporting currency for the active priority project.
+- Materialize may still write `ProjectContribution` rows; they are unused for these fields.
