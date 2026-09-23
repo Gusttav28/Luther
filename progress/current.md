@@ -20,6 +20,6 @@ Overview Breakdown / Spent by category: tap to select and sum those parents; pre
 
 ## Verification
 
-- TV1: run after this handoff
+- TV1: `npx vitest run tests/unit/category-spend.test.ts --config vitest.waterfall.config.ts` — **6 passed**. `tsc --noEmit` clean.
 - TV2: owner/browser
 - TV3: no new packages / no schema
