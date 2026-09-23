@@ -76,6 +76,10 @@ export const expenseSchema = z
       .max(60)
       .optional()
       .or(z.literal("").transform(() => undefined)),
+    parentId: z
+      .string()
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
   })
   .refine((data) => data.categoryId || data.categoryName, {
     message: "Choose or type a category name",
@@ -103,6 +107,10 @@ export function parseCompletedCreate(raw: unknown) {
 
 export const categorySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60),
+  parentId: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export const planCellSchema = z.object({

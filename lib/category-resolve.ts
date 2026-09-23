@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 export async function resolveCategoryId(
   userId: string,
   categoryId: string | undefined,
-  categoryName: string | undefined
+  categoryName: string | undefined,
+  parentId?: string
 ): Promise<string | null> {
   if (categoryId) {
     const byId = await prisma.category.findFirst({
@@ -17,6 +18,13 @@ export async function resolveCategoryId(
 
   const name = categoryName?.trim();
   if (!name) return null;
+
+  const parent = parentId
+    ? await prisma.category.findFirst({
+        where: { id: parentId, userId, parentId: null },
+      })
+    : null;
+  if (parentId && !parent) return null;
 
   const existing = await prisma.category.findUnique({
     where: { userId_name: { userId, name } },
@@ -31,6 +39,8 @@ export async function resolveCategoryId(
     return existing.id;
   }
 
-  const created = await prisma.category.create({ data: { userId, name } });
+  const created = await prisma.category.create({
+    data: { userId, name, parentId: parent?.id ?? null },
+  });
   return created.id;
 }

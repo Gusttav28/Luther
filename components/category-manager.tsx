@@ -14,6 +14,7 @@ export interface CategoryRow {
   id: string;
   name: string;
   archived: boolean;
+  parentId?: string | null;
 }
 
 export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
@@ -34,9 +35,16 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
         <p className="text-sm text-ink-faint">No categories yet — add one above or when saving an expense.</p>
       ) : (
         <ul className="[&>li+li]:border-t [&>li+li]:border-line">
-          {active.map((c) => (
-            <CategoryManagerRow key={c.id} category={c} />
-          ))}
+          {active
+            .filter((c) => !c.parentId)
+            .flatMap((c) => [
+              <CategoryManagerRow key={c.id} category={c} />,
+              ...active
+                .filter((child) => child.parentId === c.id)
+                .map((child) => (
+                  <CategoryManagerRow key={child.id} category={child} indent />
+                )),
+            ])}
         </ul>
       )}
       {archived.length > 0 && (
@@ -74,7 +82,7 @@ function AddCategoryInline() {
   );
 }
 
-function CategoryManagerRow({ category }: { category: CategoryRow }) {
+function CategoryManagerRow({ category, indent = false }: { category: CategoryRow; indent?: boolean }) {
   const [renaming, setRenaming] = useState(false);
   const [renameErrors, setRenameErrors] = useState<Record<string, string> | undefined>();
   const [deleteState, deleteAction] = useActionState(deleteCategoryAction, initialActionState);
@@ -116,8 +124,8 @@ function CategoryManagerRow({ category }: { category: CategoryRow }) {
 
   return (
     <li className="flex items-center justify-between gap-3 py-2">
-      <span className={`text-sm font-medium ${category.archived ? "text-ink-faint line-through" : "text-ink"}`}>
-        {category.name}
+      <span className={`text-sm font-medium ${indent ? "pl-4 text-ink-secondary" : ""} ${category.archived ? "text-ink-faint line-through" : "text-ink"}`}>
+        {indent ? `·· ${category.name}` : category.name}
       </span>
       <span className="flex items-center gap-2 text-xs">
         <button type="button" onClick={() => setRenaming(true)} className="text-action">

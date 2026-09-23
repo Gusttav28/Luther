@@ -8,18 +8,22 @@ import {
 } from "@/app/(app)/plan/actions";
 import { initialActionState } from "@/lib/action-state";
 import { LoadingDots } from "@/components/loading-dots";
+import { childrenOf, findCategory, rootsOf } from "@/lib/category-tree";
 
 export interface CategoryOption {
   id: string;
   name: string;
   archived?: boolean;
+  parentId?: string | null;
 }
 
 const NEW_SENTINEL = "__new__";
+const NEW_CHILD_SENTINEL = "__new_child__";
+const GENERAL_SENTINEL = "";
 
 /**
- * Category field: pick / create a category, and manage the selected one (rename, archive/restore, delete).
- * Management uses server actions (not nested forms) so it can sit inside Add/Edit expense forms.
+ * Category field: pick a main category, then General or a subcategory.
+ * Management uses server actions so it can sit inside Add/Edit expense forms.
  */
 export function CategoryPicker({
   categories,
@@ -40,57 +44,70 @@ export function CategoryPicker({
   );
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const active = useMemo(() => categories.filter((c) => !c.archived), [categories]);
-  const archived = useMemo(() => categories.filter((c) => c.archived), [categories]);
+  const nodes = useMemo(
+    () =>
+      categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        parentId: c.parentId ?? null,
+        archived: c.archived,
+      })),
+    [categories]
+  );
+  const active = useMemo(() => nodes.filter((c) => !c.archived), [nodes]);
+  const roots = useMemo(() => rootsOf(active), [active]);
 
-  const initialIsNew =
-    Boolean(defaultCategoryName) &&
-    !categories.some((c) => c.id === defaultCategoryId) &&
-    !categories.some((c) => c.name.toLowerCase() === defaultCategoryName?.trim().toLowerCase());
+  const named = defaultCategoryName
+    ? nodes.find((c) => c.name.toLowerCase() === defaultCategoryName.trim().toLowerCase())
+    : undefined;
+  const initial = findCategory(nodes, defaultCategoryId) ?? named;
+  const initialParentId = initial?.parentId ?? initial?.id ?? roots[0]?.id ?? "";
+  const initialChildId = initial?.parentId ? initial.id : GENERAL_SENTINEL;
 
   const [mode, setMode] = useState<"existing" | "new">(
-    initialIsNew || (!defaultCategoryId && active.length === 0 && archived.length === 0)
-      ? "new"
-      : "existing"
+    !defaultCategoryId && roots.length === 0 ? "new" : "existing"
   );
-  const [selectedId, setSelectedId] = useState(() => {
-    if (defaultCategoryId && categories.some((c) => c.id === defaultCategoryId)) {
-      return defaultCategoryId;
-    }
-    const byName = categories.find(
-      (c) => c.name.toLowerCase() === defaultCategoryName?.trim().toLowerCase()
-    );
-    return byName?.id ?? active[0]?.id ?? archived[0]?.id ?? "";
-  });
-  const [newName, setNewName] = useState(initialIsNew ? (defaultCategoryName ?? "") : "");
+  const [parentId, setParentId] = useState(initialParentId);
+  const [childId, setChildId] = useState(initialChildId);
+  const [newName, setNewName] = useState("");
+  const [newChildName, setNewChildName] = useState("");
   const [editing, setEditing] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
-  const selected = categories.find((c) => c.id === selectedId) ?? null;
-  const categoryIdValue = mode === "existing" ? selectedId : "";
-  const categoryNameValue = mode === "existing" ? (selected?.name ?? "") : newName.trim();
+  const parent = findCategory(nodes, parentId) ?? null;
+  const selectedId =
+    mode === "new"
+      ? ""
+      : childId === NEW_CHILD_SENTINEL
+        ? ""
+        : childId || parentId;
+  const selected = findCategory(nodes, selectedId) ?? null;
+  const childOptions = parent ? childrenOf(active, parent.id) : [];
 
-  // Keep selection valid when the category list changes (adjust state during render).
-  if (mode === "existing" && !(selectedId && categories.some((c) => c.id === selectedId))) {
-    const fallback = active[0]?.id ?? archived[0]?.id ?? "";
-    if (!fallback) {
-      setMode("new");
-      setSelectedId("");
-    } else if (selectedId !== fallback) {
-      setSelectedId(fallback);
-    }
-  }
+  const categoryIdValue = selectedId;
+  const categoryNameValue =
+    mode === "new" ? newName.trim() : childId === NEW_CHILD_SENTINEL ? newChildName.trim() : selected?.name ?? "";
+  const parentIdValue = mode === "new" ? "" : childId === NEW_CHILD_SENTINEL ? parentId : "";
 
-  function handleSelectChange(value: string) {
+  function handleParentChange(value: string) {
     setEditing(false);
     setActionError(null);
     if (value === NEW_SENTINEL) {
       setMode("new");
-      setSelectedId("");
+      setParentId("");
+      setChildId(GENERAL_SENTINEL);
       return;
     }
     setMode("existing");
-    setSelectedId(value);
+    setParentId(value);
+    setChildId(GENERAL_SENTINEL);
+    setNewChildName("");
+  }
+
+  function handleChildChange(value: string) {
+    setEditing(false);
+    setActionError(null);
+    setChildId(value);
   }
 
   function startEdit() {
@@ -127,14 +144,9 @@ export function CategoryPicker({
         return;
       }
       if (result.ok) {
-        const remaining = categories.filter((c) => c.id !== selected.id);
-        const nextActive = remaining.filter((c) => !c.archived);
-        const nextArchived = remaining.filter((c) => c.archived);
-        if (remaining.length === 0) {
-          setMode("new");
-          setSelectedId("");
-        } else {
-          setSelectedId(nextActive[0]?.id ?? nextArchived[0]?.id ?? "");
+        setChildId(GENERAL_SENTINEL);
+        if (selected.id === parentId) {
+          setParentId(roots.find((r) => r.id !== selected.id)?.id ?? "");
         }
       }
     });
@@ -154,9 +166,7 @@ export function CategoryPicker({
         setActionError(result.errors.name ?? result.errors._form ?? "Could not rename");
         return;
       }
-      if (result.ok) {
-        setEditing(false);
-      }
+      if (result.ok) setEditing(false);
     });
   }
 
@@ -167,51 +177,34 @@ export function CategoryPicker({
       </label>
       <input type="hidden" name="categoryId" value={categoryIdValue} />
       <input type="hidden" name="categoryName" value={categoryNameValue} />
+      <input type="hidden" name="parentId" value={parentIdValue} />
 
       <div className="flex flex-wrap items-stretch gap-2">
         <select
           id={`${idPrefix}-select`}
           className="field-input min-w-0 flex-1"
-          value={mode === "new" ? NEW_SENTINEL : selectedId}
-          onChange={(e) => handleSelectChange(e.target.value)}
+          value={mode === "new" ? NEW_SENTINEL : parentId}
+          onChange={(e) => handleParentChange(e.target.value)}
           aria-label="Category"
           disabled={editing || pending}
         >
-          {categories.length === 0 && mode !== "new" ? (
+          {roots.length === 0 && mode !== "new" ? (
             <option value="">No categories yet</option>
           ) : null}
-          {active.length > 0 ? (
-            <optgroup label="Active">
-              {active.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-          {archived.length > 0 ? (
-            <optgroup label="Archived">
-              {archived.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} (archived)
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
+          {roots.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
           <option value={NEW_SENTINEL}>New category…</option>
         </select>
 
-        {mode === "existing" && selected && !editing ? (
+        {mode === "existing" && parent && !editing ? (
           <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={startEdit}
-              disabled={pending}
-              className="btn-secondary px-2.5 py-2 text-xs"
-            >
+            <button type="button" onClick={startEdit} disabled={pending} className="btn-secondary px-2.5 py-2 text-xs">
               Edit
             </button>
-            {selected.archived ? (
+            {selected?.archived ? (
               <button
                 type="button"
                 onClick={() => runSetArchived(false)}
@@ -224,7 +217,7 @@ export function CategoryPicker({
               <button
                 type="button"
                 onClick={() => runSetArchived(true)}
-                disabled={pending}
+                disabled={pending || !selected}
                 className="btn-secondary min-w-[4.5rem] px-2.5 py-2 text-xs"
               >
                 {pendingAction === "archive" ? <LoadingDots /> : "Archive"}
@@ -233,7 +226,7 @@ export function CategoryPicker({
             <button
               type="button"
               onClick={runDelete}
-              disabled={pending}
+              disabled={pending || !selected}
               className="btn-danger min-w-[3.5rem] px-2.5 py-2 text-xs"
             >
               {pendingAction === "delete" ? <LoadingDots /> : "Delete"}
@@ -242,10 +235,28 @@ export function CategoryPicker({
         ) : null}
       </div>
 
-      {mode === "existing" && selected?.archived ? (
-        <p className="text-xs text-ink-muted">
-          This category is archived. Restore it to use it for new expenses, or pick an active one.
-        </p>
+      {mode === "existing" && parent ? (
+        <div>
+          <label htmlFor={`${idPrefix}-sub`} className="field-label">
+            Subcategory
+          </label>
+          <select
+            id={`${idPrefix}-sub`}
+            className="field-input"
+            value={childId}
+            onChange={(e) => handleChildChange(e.target.value)}
+            aria-label="Subcategory"
+            disabled={editing || pending}
+          >
+            <option value={GENERAL_SENTINEL}>General ({parent.name})</option>
+            {childOptions.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+            <option value={NEW_CHILD_SENTINEL}>New subcategory…</option>
+          </select>
+        </div>
       ) : null}
 
       {mode === "new" ? (
@@ -257,12 +268,29 @@ export function CategoryPicker({
             id={`${idPrefix}-new-name`}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Groceries"
+            placeholder="e.g. Subscriptions"
             className="field-input"
             autoComplete="off"
             disabled={pending}
           />
-          <p className="mt-1 text-xs text-ink-muted">Created when you add the expense.</p>
+          <p className="mt-1 text-xs text-ink-muted">Created as a main category when you add the expense.</p>
+        </div>
+      ) : null}
+
+      {childId === NEW_CHILD_SENTINEL && parent ? (
+        <div>
+          <label htmlFor={`${idPrefix}-new-child`} className="field-label">
+            New subcategory under {parent.name}
+          </label>
+          <input
+            id={`${idPrefix}-new-child`}
+            value={newChildName}
+            onChange={(e) => setNewChildName(e.target.value)}
+            placeholder="e.g. AI"
+            className="field-input"
+            autoComplete="off"
+            disabled={pending}
+          />
         </div>
       ) : null}
 
@@ -284,12 +312,7 @@ export function CategoryPicker({
           >
             {pendingAction === "rename" ? <LoadingDots /> : "Save"}
           </button>
-          <button
-            type="button"
-            onClick={() => setEditing(false)}
-            disabled={pending}
-            className="btn-secondary px-2.5 py-2 text-xs"
-          >
+          <button type="button" onClick={() => setEditing(false)} disabled={pending} className="btn-secondary px-2.5 py-2 text-xs">
             Cancel
           </button>
         </div>

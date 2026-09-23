@@ -71,10 +71,12 @@ export function spentByCategoryFromSnapshot(
     { name: string; rows: Array<{ amountMinor: number; currency: Currency }> }
   >();
   for (const expense of snapshot.expenses) {
-    const existing = byCategory.get(expense.categoryId);
+    const rootId = expense.parentId ?? expense.categoryId;
+    const rootName = expense.parentId ? (expense.parentName ?? expense.categoryName) : expense.categoryName;
+    const existing = byCategory.get(rootId);
     const row = { amountMinor: expense.amountMinor, currency: expense.currency };
     if (existing) existing.rows.push(row);
-    else byCategory.set(expense.categoryId, { name: expense.categoryName, rows: [row] });
+    else byCategory.set(rootId, { name: rootName, rows: [row] });
   }
 
   const categories: CategorySpend[] = [];

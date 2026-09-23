@@ -9,6 +9,7 @@ import {
 export interface PlanMatrixRow {
   categoryId: string;
   categoryName: string;
+  parentId: string | null;
   archived: boolean;
   /** Planned minor units per month index 0-11, converted to reporting. Null = rate missing. */
   planned: (number | null)[];
@@ -90,12 +91,30 @@ export async function getPlanMatrix(
       return {
         categoryId: category.id,
         categoryName: category.name,
+        parentId: category.parentId,
         archived: category.archived,
         planned,
         plannedRaw,
         actual,
         rowTotal,
       };
+    })
+    .sort((a, b) => {
+      const aRoot = a.parentId ?? a.categoryId;
+      const bRoot = b.parentId ?? b.categoryId;
+      if (aRoot !== bRoot) {
+        const aName = a.parentId
+          ? (categories.find((c) => c.id === a.parentId)?.name ?? a.categoryName)
+          : a.categoryName;
+        const bName = b.parentId
+          ? (categories.find((c) => c.id === b.parentId)?.name ?? b.categoryName)
+          : b.categoryName;
+        const byRoot = aName.localeCompare(bName);
+        if (byRoot !== 0) return byRoot;
+      }
+      if (!a.parentId && b.parentId) return -1;
+      if (a.parentId && !b.parentId) return 1;
+      return a.categoryName.localeCompare(b.categoryName);
     });
 
   const columnTotals: (number | null)[] = Array.from({ length: 12 }, (_, monthIdx) =>

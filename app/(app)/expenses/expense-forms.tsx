@@ -459,11 +459,11 @@ export function ExpenseListRow({
             </p>
             <p className="text-xs text-ink-muted">
               <span className="md:hidden">
-                {dateLabel} · {expense.categoryName}
+                {dateLabel} · {expense.categoryPath}
               </span>
               <span className="hidden md:inline">
                 {expense.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ·{" "}
-                {expense.categoryName}
+                {expense.categoryPath}
                 {expense.completed ? "" : " · Planning"}
               </span>
             </p>
