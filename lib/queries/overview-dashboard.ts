@@ -9,6 +9,9 @@ import { getScopeAmounts } from "@/lib/queries/waterfall-scope";
 import { getProjectsView, type ProjectsView } from "@/lib/queries/projects";
 import { getDerivedAccounts, type DerivedAccounts } from "@/lib/queries/accounts";
 import { getSettings } from "@/lib/queries/settings";
+import { prisma } from "@/lib/prisma";
+import { attachSubcategorySpend } from "@/lib/category-spend";
+import type { SpendChild } from "@/lib/category-spend";
 
 export interface MomDelta {
   /** Percent change vs prior month; null when not computable. */
@@ -53,6 +56,7 @@ export interface CategorySpend {
   name: string;
   amountMinor: number | null;
   share: number | null;
+  children: SpendChild[];
 }
 
 export interface SpentByCategoryResult {
@@ -64,12 +68,14 @@ export interface SpentByCategoryResult {
 export function spentByCategoryFromSnapshot(
   snapshot: MonthSnapshot,
   reporting: Currency,
-  rates: Rates
+  rates: Rates,
+  categoryNodes: Array<{ id: string; name: string; parentId: string | null }> = []
 ): SpentByCategoryResult {
   const byCategory = new Map<
     string,
     { name: string; rows: Array<{ amountMinor: number; currency: Currency }> }
   >();
+  const byLeaf = new Map<string, Array<{ amountMinor: number; currency: Currency }>>();
   for (const expense of snapshot.expenses) {
     const rootId = expense.parentId ?? expense.categoryId;
     const rootName = expense.parentId ? (expense.parentName ?? expense.categoryName) : expense.categoryName;
@@ -77,27 +83,43 @@ export function spentByCategoryFromSnapshot(
     const row = { amountMinor: expense.amountMinor, currency: expense.currency };
     if (existing) existing.rows.push(row);
     else byCategory.set(rootId, { name: rootName, rows: [row] });
+    const leafRows = byLeaf.get(expense.categoryId) ?? [];
+    leafRows.push(row);
+    byLeaf.set(expense.categoryId, leafRows);
   }
 
-  const categories: CategorySpend[] = [];
+  const parents: Array<{
+    categoryId: string;
+    name: string;
+    amountMinor: number | null;
+    share: number | null;
+  }> = [];
   let totalMinor: number | null = 0;
 
   for (const [categoryId, { name, rows }] of byCategory) {
     const amountMinor = sumInCurrency(rows, reporting, rates);
     if (amountMinor === null) totalMinor = null;
     else if (totalMinor !== null) totalMinor += amountMinor;
-    categories.push({ categoryId, name, amountMinor, share: null });
+    parents.push({ categoryId, name, amountMinor, share: null });
   }
 
-  categories.sort((a, b) => (b.amountMinor ?? 0) - (a.amountMinor ?? 0));
+  parents.sort((a, b) => (b.amountMinor ?? 0) - (a.amountMinor ?? 0));
 
   if (totalMinor !== null && totalMinor > 0) {
-    for (const cat of categories) {
+    for (const cat of parents) {
       cat.share = cat.amountMinor === null ? null : cat.amountMinor / totalMinor;
     }
   }
 
-  return { totalMinor, categories };
+  const leafTotals = new Map<string, number | null>();
+  for (const [id, rows] of byLeaf) {
+    leafTotals.set(id, sumInCurrency(rows, reporting, rates));
+  }
+
+  return {
+    totalMinor,
+    categories: attachSubcategorySpend(parents, categoryNodes, leafTotals),
+  };
 }
 
 export interface CashflowPoint {
@@ -203,6 +225,7 @@ export async function getOverviewDashboard(
     priorH2Scope,
     projectsView,
     settings,
+    categoryNodes,
   ] = await Promise.all([
     loadMonthSnapshot(userId, year, month),
     loadMonthSnapshot(userId, prior.year, prior.month),
@@ -215,6 +238,10 @@ export async function getOverviewDashboard(
     getScopeAmounts(userId, prior.year, prior.month, "H2", reporting, rates),
     getProjectsView(userId, rates, new Date(), { skipMaterialize: true }),
     getSettings(userId),
+    prisma.category.findMany({
+      where: { userId },
+      select: { id: true, name: true, parentId: true },
+    }),
   ]);
 
   const accounts = await getDerivedAccounts(userId, settings, year, month);
@@ -237,7 +264,7 @@ export async function getOverviewDashboard(
   return {
     overview,
     priorOverview,
-    spentByCategory: spentByCategoryFromSnapshot(currentSnap, reporting, rates),
+    spentByCategory: spentByCategoryFromSnapshot(currentSnap, reporting, rates, categoryNodes),
     cashflow: cashflowFromSnapshot(currentSnap, reporting, rates),
     projectsView,
     accounts,

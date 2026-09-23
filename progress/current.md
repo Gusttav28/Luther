@@ -1,15 +1,25 @@
 # Current implementation progress
 
-- Work item: expense-subcategories production hotfix (`parentId` missing on Supabase)
-- Branch: `cursor/category-parent-migrate-ef43`
-- Cause: PR #7 deployed Prisma queries that select `Category.parentId`, but Vercel build only ran `prisma generate` — never `migrate deploy`. Every page that loads categories throws a server exception.
+- Work item: overview-category-select (`specs/overview-category-select/`)
+- Branch: `cursor/overview-category-select-ef43`
+- Spec package: 2026-09-23
+- Human approval: owner request 2026-09-23 (selectable Breakdown totals + long-press subcategories)
+- Implementer session: 2026-09-23
 - Handoff: **IMPLEMENTED**
 
-## Fix
+## Outcome
 
-- `package.json` `build` now runs `prisma migrate deploy` so the next Vercel deploy applies `20260923021000_category_parent`.
-- Migration SQL is idempotent (`IF NOT EXISTS`) so a manual Supabase apply and migrate deploy do not conflict.
+Overview Breakdown / Spent by category: tap to select and sum those parents; press-and-hold (or right-click) floats subcategory amounts.
 
-## Immediate unblock (no deploy required)
+## Files
 
-Run this in the Supabase SQL editor, then reload luther-two.vercel.app.
+- `lib/category-spend.ts` — selected sum + attach children
+- `lib/queries/overview-dashboard.ts` — load categories (`userId`), attach children
+- `components/overview/spent-by-category.tsx` — selection + popover
+- `tests/unit/category-spend.test.ts`
+
+## Verification
+
+- TV1: run after this handoff
+- TV2: owner/browser
+- TV3: no new packages / no schema
