@@ -12,13 +12,24 @@ export async function createCategoryAction(
 ): Promise<ActionState> {
   try {
     const userId = await requireUserId();
-    const parsed = categorySchema.safeParse({ name: formData.get("name") ?? "" });
+    const parsed = categorySchema.safeParse({
+      name: formData.get("name") ?? "",
+      parentId: formData.get("parentId") ?? "",
+    });
     if (!parsed.success) return { errors: fieldErrors(parsed.error) };
     const existing = await prisma.category.findUnique({
       where: { userId_name: { userId, name: parsed.data.name } },
     });
     if (existing) return { errors: { name: "A category with this name already exists" } };
-    await prisma.category.create({ data: { userId, name: parsed.data.name } });
+    let parentId: string | null = null;
+    if (parsed.data.parentId) {
+      const parent = await prisma.category.findFirst({
+        where: { id: parsed.data.parentId, userId, parentId: null },
+      });
+      if (!parent) return { errors: { parentId: "Choose a main category" } };
+      parentId = parent.id;
+    }
+    await prisma.category.create({ data: { userId, name: parsed.data.name, parentId } });
     revalidatePath("/plan");
     revalidatePath("/expenses");
     return { ok: true };
@@ -68,6 +79,14 @@ export async function deleteCategoryAction(
   try {
     const userId = await requireUserId();
     const id = String(formData.get("id") ?? "");
+    const childCount = await prisma.category.count({ where: { userId, parentId: id } });
+    if (childCount > 0) {
+      return {
+        errors: {
+          _form: "Remove or archive subcategories first.",
+        },
+      };
+    }
     const expenseCount = await prisma.expense.count({ where: { userId, categoryId: id } });
     if (expenseCount > 0) {
       return {

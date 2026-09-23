@@ -108,8 +108,12 @@ export default async function PlanPage({
           />
         </div>
 
-        <div className="max-w-md">
-          <AddCategoryForm />
+        <div className="max-w-lg">
+          <AddCategoryForm
+            parents={matrix.rows
+              .filter((row) => !row.parentId && !row.archived)
+              .map((row) => ({ id: row.categoryId, name: row.categoryName }))}
+          />
         </div>
 
         <div className="card overflow-x-auto p-0">
@@ -139,7 +143,11 @@ export default async function PlanPage({
                       row.archived ? "text-ink-faint line-through" : "text-ink"
                     }`}
                   >
-                    {row.categoryName}
+                    {row.parentId ? (
+                      <span className="text-ink-muted">·· {row.categoryName}</span>
+                    ) : (
+                      row.categoryName
+                    )}
                   </th>
                   {row.planned.map((planned, monthIdx) => (
                     <td key={monthIdx} className="px-2 py-2 text-right">

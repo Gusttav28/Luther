@@ -5,6 +5,7 @@ import {
   type Currency,
   type Rates,
 } from "@/lib/money";
+import { categoryFilterIds, categoryPathLabel } from "@/lib/category-tree";
 
 export interface ExpenseRow {
   id: string;
@@ -13,6 +14,8 @@ export interface ExpenseRow {
   currency: Currency;
   categoryId: string;
   categoryName: string;
+  categoryPath: string;
+  parentId: string | null;
   name: string | null;
   completed: boolean;
   /** Converted to reporting currency; null when the needed rate is unset. */
@@ -34,11 +37,17 @@ export async function getExpenses(
   const start = new Date(filter.year, filter.month - 1, 1);
   const end = new Date(filter.year, filter.month, 1);
 
+  const categories = await prisma.category.findMany({
+    where: { userId },
+    select: { id: true, name: true, parentId: true },
+  });
+  const filterIds = categoryFilterIds(categories, filter.categoryId);
+
   const rows = await prisma.expense.findMany({
     where: {
       userId,
       date: { gte: start, lt: end },
-      ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
+      ...(filterIds ? { categoryId: { in: filterIds } } : {}),
     },
     include: { category: true },
     orderBy: { date: "desc" },
@@ -64,6 +73,8 @@ export async function getExpenses(
       currency: r.currency as Currency,
       categoryId: r.categoryId,
       categoryName: r.category.name,
+      categoryPath: categoryPathLabel(categories, r.categoryId),
+      parentId: r.category.parentId,
       name: r.name,
       completed: r.completed,
       convertedMinor: converted,

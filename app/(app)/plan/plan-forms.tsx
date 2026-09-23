@@ -11,20 +11,40 @@ import {
 import { initialActionState } from "@/lib/action-state";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 
-export function AddCategoryForm() {
+export function AddCategoryForm({
+  parents = [],
+}: {
+  parents?: Array<{ id: string; name: string }>;
+} = {}) {
   const [state, formAction] = useActionState(createCategoryAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.ok) formRef.current?.reset();
   }, [state]);
   return (
-    <form ref={formRef} action={formAction} className="flex items-end gap-2">
-      <div className="flex-1">
+    <form ref={formRef} action={formAction} className="flex flex-wrap items-end gap-2">
+      {parents.length > 0 ? (
+        <div className="w-full sm:w-44">
+          <label htmlFor="new-category-parent" className="field-label">
+            Under
+          </label>
+          <select id="new-category-parent" name="parentId" className="field-input" defaultValue="">
+            <option value="">Main category</option>
+            {parents.map((parent) => (
+              <option key={parent.id} value={parent.id}>
+                {parent.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <div className="min-w-0 flex-1">
         <label htmlFor="new-category" className="field-label">
           New category
         </label>
-        <input id="new-category" name="name" className="field-input" placeholder="e.g. Food" />
+        <input id="new-category" name="name" className="field-input" placeholder="e.g. Food or AI" />
         {state.errors?.name && <p className="error-text">{state.errors.name}</p>}
+        {state.errors?.parentId && <p className="error-text">{state.errors.parentId}</p>}
         {state.errors?._form && <p className="error-text">{state.errors._form}</p>}
       </div>
       <PendingSubmitButton idle="Add" className="btn-primary min-w-[4rem]" pendingLabel="Adding" />

@@ -9,6 +9,7 @@ import { ExportPlanButton } from "./export-plan-button";
 import { ExpensesMonthFrame } from "./expenses-month-frame";
 import { RegisterAddExpenseForm } from "@/components/add-expense-sheet";
 import { CHART_PALETTE } from "@/lib/chart-colors";
+import { findCategory, rollupSpendToParents } from "@/lib/category-tree";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,13 @@ export default async function ExpensesPage({
     id: c.id,
     name: c.name,
     archived: c.archived,
+    parentId: c.parentId,
+  }));
+  const categoryNodes = allCategories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    parentId: c.parentId,
+    archived: c.archived,
   }));
   const data = await getExpenses(
     userId,
@@ -85,17 +93,38 @@ export default async function ExpensesPage({
       : "01"
   }`;
 
-  const byCategory = new Map<string, { name: string; total: number }>();
-  for (const expense of data.expenses) {
-    if (!expense.completed || expense.convertedMinor === null) continue;
-    const existing = byCategory.get(expense.categoryId);
-    if (existing) existing.total += expense.convertedMinor;
-    else byCategory.set(expense.categoryId, { name: expense.categoryName, total: expense.convertedMinor });
-  }
-  const categorySegments = [...byCategory.entries()].map(([id, { name, total }], i) => ({
-    key: id,
-    name,
-    value: total,
+  const completedForDonut = data.expenses.filter(
+    (expense) => expense.completed && expense.convertedMinor !== null
+  );
+  const selectedCategory = findCategory(categoryNodes, categoryId);
+  const donutRows = completedForDonut.map((expense) => ({
+    categoryId: expense.categoryId,
+    amountMinor: expense.convertedMinor as number,
+  }));
+  const rolled =
+    !categoryId || !selectedCategory?.parentId
+      ? selectedCategory && !selectedCategory.parentId
+        ? donutRows.reduce<Array<{ categoryId: string; name: string; amountMinor: number }>>(
+            (acc, row) => {
+              const node = findCategory(categoryNodes, row.categoryId);
+              const name = node?.parentId ? node.name : `${selectedCategory.name} (general)`;
+              const existing = acc.find((item) => item.categoryId === row.categoryId);
+              if (existing) existing.amountMinor += row.amountMinor;
+              else acc.push({ categoryId: row.categoryId, name, amountMinor: row.amountMinor });
+              return acc;
+            },
+            []
+          )
+        : rollupSpendToParents(donutRows, categoryNodes)
+      : donutRows.map((row) => ({
+          categoryId: row.categoryId,
+          name: selectedCategory.name,
+          amountMinor: row.amountMinor,
+        }));
+  const categorySegments = rolled.map((item, i) => ({
+    key: item.categoryId,
+    name: item.name,
+    value: item.amountMinor,
     color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
   }));
 
@@ -104,7 +133,12 @@ export default async function ExpensesPage({
       year={year}
       month={month}
       categoryId={categoryId}
-      categories={categories}
+      categories={categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        archived: c.archived,
+        parentId: c.parentId,
+      }))}
       period={period}
       expenseCount={filteredExpenses.length}
       displayTotal={displayTotal}

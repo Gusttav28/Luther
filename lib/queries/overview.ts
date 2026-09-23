@@ -26,6 +26,8 @@ export interface MonthExpenseRow {
   date: Date;
   categoryId: string;
   categoryName: string;
+  parentId: string | null;
+  parentName: string | null;
 }
 
 export interface MonthIncomeRow {
@@ -104,7 +106,7 @@ export async function loadMonthSnapshot(
         currency: true,
         date: true,
         categoryId: true,
-        category: { select: { name: true } },
+        category: { select: { name: true, parentId: true, parent: { select: { name: true } } } },
       },
     }),
     prisma.savingsContribution.findMany({
@@ -127,6 +129,8 @@ export async function loadMonthSnapshot(
       date: e.date,
       categoryId: e.categoryId,
       categoryName: e.category.name,
+      parentId: e.category.parentId,
+      parentName: e.category.parent?.name ?? null,
     })),
     savingsMonth: savingsMonth.map((s) => ({
       amountMinor: s.amountMinor,

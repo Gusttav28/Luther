@@ -179,7 +179,11 @@ export function MobilePlan({
         </div>
 
         <div className="mb-4 border-b border-line pb-4">
-          <AddCategoryForm />
+          <AddCategoryForm
+            parents={matrix.rows
+              .filter((row) => !row.parentId && !row.archived)
+              .map((row) => ({ id: row.categoryId, name: row.categoryName }))}
+          />
         </div>
 
         {planMode === "grid" ? (
@@ -213,7 +217,9 @@ export function MobilePlan({
                       }`}
                     >
                       <div className="flex flex-col gap-1">
-                        <span>{row.categoryName}</span>
+                        <span>
+                          {row.parentId ? `·· ${row.categoryName}` : row.categoryName}
+                        </span>
                         <CategoryRowActions
                           categoryId={row.categoryId}
                           categoryName={row.categoryName}
@@ -316,7 +322,7 @@ export function MobilePlan({
                             row.archived ? "text-ink-faint line-through" : "text-ink"
                           }`}
                         >
-                          {row.categoryName}
+                          {row.parentId ? `·· ${row.categoryName}` : row.categoryName}
                         </p>
                         <div className="mt-1">
                           <CategoryRowActions

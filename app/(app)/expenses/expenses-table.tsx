@@ -1,10 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import { Money, RatesNote } from "@/components/money";
 import type { Currency } from "@/lib/money";
 import type { CategoryOption } from "@/components/category-picker";
+import { childrenOf, findCategory, rootsOf } from "@/lib/category-tree";
 
 export type HalfFilter = "ALL" | "H1" | "H2";
 
@@ -69,6 +71,16 @@ export function ExpensesTable({
     });
   }
 
+  const nodes = categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    parentId: c.parentId ?? null,
+    archived: c.archived,
+  }));
+  const rootCategories = rootsOf(nodes.filter((c) => !c.archived));
+  const selected = findCategory(nodes, categoryId);
+  const selectedRootId = selected?.parentId ?? selected?.id;
+
   const donePercent =
     displayTotal !== null && trackedTotalMinor !== null && trackedTotalMinor > 0
       ? Math.min(100, Math.round((displayTotal / trackedTotalMinor) * 100))
@@ -116,17 +128,19 @@ export function ExpensesTable({
         >
           All
         </button>
-        {categories.map((c) => (
-          <button
+        {rootCategories.map((c) => (
+          <CategoryFilterChip
             key={c.id}
-            type="button"
-            disabled={pending}
-            onClick={() => navigate(c.id, period)}
-            className={`chip ${categoryId === c.id ? "chip-active" : ""}`}
-            aria-pressed={categoryId === c.id}
-          >
-            {c.name}
-          </button>
+            parent={c}
+            childCategories={childrenOf(
+              nodes.filter((n) => !n.archived),
+              c.id
+            )}
+            selectedId={categoryId}
+            selectedRootId={selectedRootId}
+            pending={pending}
+            onSelect={(id) => navigate(id, period)}
+          />
         ))}
       </div>
 
@@ -144,11 +158,22 @@ export function ExpensesTable({
             className="field-input min-w-0 flex-1 !py-2 text-sm"
           >
             <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {rootCategories.map((root) => {
+              const kids = childrenOf(
+                nodes.filter((n) => !n.archived),
+                root.id
+              );
+              return (
+                <optgroup key={root.id} label={root.name}>
+                  <option value={root.id}>{root.name} (all)</option>
+                  {kids.map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
           <div
             className="inline-flex shrink-0 rounded-[10px] bg-surface-muted p-0.5"
@@ -230,6 +255,96 @@ export function ExpensesTable({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CategoryFilterChip({
+  parent,
+  childCategories,
+  selectedId,
+  selectedRootId,
+  pending,
+  onSelect,
+}: {
+  parent: { id: string; name: string };
+  childCategories: Array<{ id: string; name: string }>;
+  selectedId?: string;
+  selectedRootId?: string;
+  pending: boolean;
+  onSelect: (id: string | undefined) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const parentActive = selectedRootId === parent.id;
+  const childActive = childCategories.some((child) => child.id === selectedId);
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => onSelect(parent.id)}
+        className={`chip ${parentActive ? "chip-active" : ""} ${childCategories.length ? "!rounded-r-none" : ""}`}
+        aria-pressed={parentActive && !childActive}
+      >
+        {parent.name}
+        {childActive ? (
+          <span className="ml-1 font-normal opacity-80">
+            · {childCategories.find((c) => c.id === selectedId)?.name}
+          </span>
+        ) : null}
+      </button>
+      {childCategories.length > 0 ? (
+        <>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setOpen((value) => !value)}
+            className={`chip !rounded-l-none !px-1.5 ${parentActive ? "chip-active" : ""}`}
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            aria-label={`Subcategories of ${parent.name}`}
+          >
+            <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+          </button>
+          {open ? (
+            <ul
+              className="absolute left-0 top-full z-20 mt-1 min-w-[10rem] rounded-xl border border-line bg-surface-card py-1 shadow-lg"
+              role="listbox"
+              aria-label={`${parent.name} subcategories`}
+            >
+              <li>
+                <button
+                  type="button"
+                  className="block w-full px-3 py-1.5 text-left text-sm hover:bg-surface-muted"
+                  onClick={() => {
+                    onSelect(parent.id);
+                    setOpen(false);
+                  }}
+                >
+                  {parent.name} (all)
+                </button>
+              </li>
+              {childCategories.map((child) => (
+                <li key={child.id}>
+                  <button
+                    type="button"
+                    className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-surface-muted ${
+                      selectedId === child.id ? "font-semibold text-brand-800 dark:text-brand-300" : ""
+                    }`}
+                    onClick={() => {
+                      onSelect(child.id);
+                      setOpen(false);
+                    }}
+                  >
+                    {child.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

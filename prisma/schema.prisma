@@ -62,12 +62,17 @@ model Category {
   userId   String
   name     String
   archived Boolean @default(false)
+  /// Null = main category. Set only to another root owned by the same user.
+  parentId String?
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
   planCells PlanCell[]
   expenses  Expense[]
 
   @@unique([userId, name])
+  @@index([userId, parentId])
 }
 
 model PlanCell {

@@ -46,6 +46,7 @@ function parseForm(formData: FormData) {
     name: formData.get("name") ?? "",
     categoryId: formData.get("categoryId") ?? "",
     categoryName: formData.get("categoryName") ?? "",
+    parentId: formData.get("parentId") ?? "",
   });
 }
 
@@ -69,7 +70,8 @@ export async function createExpenseAction(
     const categoryId = await resolveCategoryId(
       userId,
       parsed.data.categoryId,
-      parsed.data.categoryName
+      parsed.data.categoryName,
+      parsed.data.parentId
     );
     if (!categoryId) {
       return { errors: { categoryName: "Choose or type a category name" } };
@@ -166,7 +168,8 @@ export async function updateExpenseAction(
     const categoryId = await resolveCategoryId(
       userId,
       parsed.data.categoryId,
-      parsed.data.categoryName
+      parsed.data.categoryName,
+      parsed.data.parentId
     );
     if (!categoryId) {
       return { errors: { categoryName: "Choose or type a category name" } };
