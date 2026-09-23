@@ -1,15 +1,14 @@
 # Current implementation progress
 
-- Work item: expense-subcategories production hotfix (`parentId` missing on Supabase)
-- Branch: `cursor/category-parent-migrate-ef43`
-- Cause: PR #7 deployed Prisma queries that select `Category.parentId`, but Vercel build only ran `prisma generate` — never `migrate deploy`. Every page that loads categories throws a server exception.
+- Work item: unbreak Vercel build after category-parent migrate
+- Branch: `cursor/unbreak-vercel-build-ef43`
+- Cause: PR #8 added `prisma migrate deploy` to `npm run build`. Vercel IAD cannot open `db.*.supabase.co:5432` (P1001), so the deploy never finishes.
 - Handoff: **IMPLEMENTED**
 
 ## Fix
 
-- `package.json` `build` now runs `prisma migrate deploy` so the next Vercel deploy applies `20260923021000_category_parent`.
-- Migration SQL is idempotent (`IF NOT EXISTS`) so a manual Supabase apply and migrate deploy do not conflict.
+- Build is `prisma generate && next build` again. Schema changes are applied in the Supabase SQL editor (or locally with `DIRECT_URL`), not on the Vercel build machine.
 
-## Immediate unblock (no deploy required)
+## Still required for the runtime crash
 
-Run this in the Supabase SQL editor, then reload luther-two.vercel.app.
+`Category.parentId` must exist in production. If that SQL was not run yet, the app will deploy but keep throwing on every category query.

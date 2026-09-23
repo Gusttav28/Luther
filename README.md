@@ -16,7 +16,7 @@ cp .env.example .env
 #   DIRECT_URL    — Supabase direct URI (port 5432) for migrations
 #   AUTH_SECRET   — generate with: openssl rand -base64 32
 #   OWNER_EMAIL / OWNER_PASSWORD — your login credentials (seed only; stored hashed)
-npx prisma migrate deploy   # apply migrations (also runs on Vercel build)
+npx prisma migrate deploy   # apply migrations locally (Vercel cannot reach Supabase :5432)
 npm run db:seed          # create the owner account and defaults
 npm run dev              # http://localhost:3000
 ```
