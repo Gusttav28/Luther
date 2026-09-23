@@ -6,6 +6,8 @@
 - Human approval: owner request 2026-09-23 (subcategories under Expenses + table dropdown)
 - Implementer session: 2026-09-23
 - Handoff: **IMPLEMENTED**
+- Review: **APPROVED** (`reviews/expense-subcategories/review.md`); TV2 owner/browser still open
+- PR: GitHub rejected `create_pr` (`must be a collaborator`). Branch is pushed.
 
 ## Outcome
 
