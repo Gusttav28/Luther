@@ -23,6 +23,17 @@ npm run dev              # http://localhost:3000
 
 Log in with the `OWNER_EMAIL` / `OWNER_PASSWORD` you set. Never commit `.env` or secrets.
 
+## Cursor Cloud
+
+Most Luther work is implemented in Cursor Cloud, merged to `main`, and auto-deployed by Vercel. **Vercel does not run `prisma migrate deploy`.** The build is `prisma generate && next build` only, because the Vercel builder cannot reach the Supabase direct host (`:5432`).
+
+If a Cloud (or local) change adds or edits `prisma/schema.prisma` or `prisma/migrations/`:
+
+1. Call it out in the PR and in `progress/current.md`.
+2. Do not assume production already has the SQL.
+3. Stop and tell Gustavo to run `npx prisma migrate deploy` locally (needs `DIRECT_URL`) **before or as the PR merges**.
+4. Do not put `migrate deploy` back into the Vercel `build` script.
+
 ## Using the app
 
 - **Overview**: earned / spent / saved / remaining; saved follows the 70% lifetime waterfall from leftover after expenses.

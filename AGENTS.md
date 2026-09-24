@@ -33,6 +33,7 @@ Only the human owner (Gustavo) approves the transition from specification to imp
 - Implementer and Reviewer must be different agents.
 - Financial data is sensitive: require explicit security requirements, minimum-necessary access, and no secrets committed to the repository.
 - New dependencies require explicit approval in the spec.
+- Vercel does not apply Prisma migrations. If the work adds or changes `prisma/migrations/` or `prisma/schema.prisma`, stop and ask the owner to run `npx prisma migrate deploy` locally (`DIRECT_URL`) before merge. See README “Cursor Cloud”.
 
 ## Stop conditions
 
