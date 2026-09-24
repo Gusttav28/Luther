@@ -113,6 +113,15 @@ export const categorySchema = z.object({
     .or(z.literal("").transform(() => undefined)),
 });
 
+/** Empty `parentId` moves the category back to a main category. */
+export const categoryMoveSchema = z.object({
+  id: z.string().min(1),
+  parentId: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+});
+
 export const planCellSchema = z.object({
   categoryId: z.string().min(1),
   year: yearSchema,
