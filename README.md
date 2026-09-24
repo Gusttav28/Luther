@@ -16,7 +16,7 @@ cp .env.example .env
 #   DIRECT_URL    — Supabase direct URI (port 5432) for migrations
 #   AUTH_SECRET   — generate with: openssl rand -base64 32
 #   OWNER_EMAIL / OWNER_PASSWORD — your login credentials (seed only; stored hashed)
-npx prisma migrate deploy   # apply migrations (also runs on Vercel build)
+npx prisma migrate deploy   # apply migrations locally (not on Vercel build)
 npm run db:seed          # create the owner account and defaults
 npm run dev              # http://localhost:3000
 ```
@@ -41,7 +41,7 @@ All amounts are stored as integer minor units.
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Development server |
-| `npm run build` / `npm start` | Production build / serve |
+| `npm run build` / `npm start` | Production build / serve (`build` is `prisma generate && next build`; run `npx prisma migrate deploy` locally before a schema change goes live) |
 | `npm test` | Unit tests (Vitest; uses a throwaway `prisma/test.db`) |
 | `npm run test:e2e` | E2E smoke + responsive checks (Playwright; needs `npx playwright install chromium` once) |
 | `npm run lint` | ESLint |
