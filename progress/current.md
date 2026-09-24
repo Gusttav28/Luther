@@ -1,25 +1,24 @@
 # Current implementation progress
 
-- Work item: overview-category-select (`specs/overview-category-select/`)
-- Branch: `cursor/overview-category-select-ef43`
+- Work item: vercel-build-no-migrate (`specs/vercel-build-no-migrate/`)
+- Branch: `cursor/vercel-build-no-migrate-ef43`
 - Spec package: 2026-09-23
-- Human approval: owner request 2026-09-23 (selectable Breakdown totals + long-press subcategories)
+- Human approval: owner 2026-09-23 — take `migrate deploy` out of the Vercel build, keep it local, redeploy
 - Implementer session: 2026-09-23
 - Handoff: **IMPLEMENTED**
 
 ## Outcome
 
-Overview Breakdown / Spent by category: tap to select and sum those parents; press-and-hold (or right-click) floats subcategory amounts.
+Vercel `npm run build` no longer runs `prisma migrate deploy` (that step was failing with `P1001` to Supabase `:5432`). Migrations stay a local command.
 
 ## Files
 
-- `lib/category-spend.ts` — selected sum + attach children
-- `lib/queries/overview-dashboard.ts` — load categories (`userId`), attach children
-- `components/overview/spent-by-category.tsx` — selection + popover
-- `tests/unit/category-spend.test.ts`
+- `package.json` — `build`: `prisma generate && next build`
+- `README.md` — local-only migrate wording
+- `specs/vercel-build-no-migrate/` — approved hotfix spec
 
 ## Verification
 
-- TV1: `npx vitest run tests/unit/category-spend.test.ts --config vitest.waterfall.config.ts` — **6 passed**. `tsc --noEmit` clean.
-- TV2: owner/browser
-- TV3: no new packages / no schema
+- TV1: `scripts.build` is `prisma generate && next build`
+- TV2: pending production redeploy of the merged commit
+- TV3: no `.env`, no schema, no new packages
