@@ -6,6 +6,7 @@ import {
   renameCategoryAction,
   setCategoryArchivedAction,
   deleteCategoryAction,
+  setCategoryParentAction,
   setPlanCellAction,
 } from "./actions";
 import { initialActionState } from "@/lib/action-state";
@@ -59,12 +60,15 @@ export function PlanCellInput({
   month,
   valueMinor,
   inputClassName,
+  ariaLabel,
 }: {
   categoryId: string;
   year: number;
   month: number;
   valueMinor: number | null;
+  /** Replaces the default size, padding, radius, and background classes. */
   inputClassName?: string;
+  ariaLabel?: string;
 }) {
   const [state, formAction] = useActionState(setPlanCellAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -80,9 +84,10 @@ export function PlanCellInput({
         name="amount"
         inputMode="decimal"
         defaultValue={defaultValue}
-        aria-label={`Plan for month ${month}`}
-        className={`rounded border bg-surface-card px-1.5 py-1 text-right text-xs tabular-nums text-ink focus:border-brand-500 focus:outline-none ${
-          inputClassName ?? "w-20"
+        aria-label={ariaLabel ?? `Plan for month ${month}`}
+        placeholder="0"
+        className={`border text-right tabular-nums text-ink focus:border-brand-500 focus:outline-none ${
+          inputClassName ?? "w-20 rounded bg-surface-card px-1.5 py-1 text-xs"
         } ${state.errors ? "border-red-400" : "border-line-strong"}`}
         onBlur={(e) => {
           if (e.target.value !== defaultValue) formRef.current?.requestSubmit();
@@ -98,14 +103,63 @@ export function PlanCellInput({
   );
 }
 
+/** Moves a category under a main category, or back to main. Submits on change. */
+function MoveCategoryForm({
+  categoryId,
+  parentId,
+  parents,
+}: {
+  categoryId: string;
+  parentId: string | null;
+  parents: Array<{ id: string; name: string }>;
+}) {
+  const [state, formAction] = useActionState(setCategoryParentAction, initialActionState);
+  const formRef = useRef<HTMLFormElement>(null);
+  const options = parents.filter((parent) => parent.id !== categoryId);
+  if (options.length === 0 && !parentId) return null;
+  return (
+    <form ref={formRef} action={formAction} className="inline-flex items-center gap-1">
+      <input type="hidden" name="id" value={categoryId} />
+      <label className="sr-only" htmlFor={`move-${categoryId}`}>
+        Move under
+      </label>
+      <select
+        id={`move-${categoryId}`}
+        name="parentId"
+        key={parentId ?? ""}
+        defaultValue={parentId ?? ""}
+        onChange={() => formRef.current?.requestSubmit()}
+        className="rounded border border-line-strong bg-surface-card px-1 py-0.5 text-xs text-ink"
+      >
+        <option value="">Main category</option>
+        {options.map((parent) => (
+          <option key={parent.id} value={parent.id}>
+            Under {parent.name}
+          </option>
+        ))}
+      </select>
+      {state.errors?._form && (
+        <span className="text-[10px] text-red-500">{state.errors._form}</span>
+      )}
+    </form>
+  );
+}
+
 export function CategoryRowActions({
   categoryId,
   categoryName,
   archived,
+  parentId = null,
+  parents,
+  hasChildren = false,
 }: {
   categoryId: string;
   categoryName: string;
   archived: boolean;
+  parentId?: string | null;
+  /** Active main categories; when given (and the row has no children) shows "Move under". */
+  parents?: Array<{ id: string; name: string }>;
+  hasChildren?: boolean;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [renameErrors, setRenameErrors] = useState<Record<string, string> | undefined>();
@@ -146,7 +200,10 @@ export function CategoryRowActions({
   }
 
   return (
-    <span className="flex items-center gap-2 text-xs">
+    <span className="flex flex-wrap items-center gap-2 text-xs">
+      {parents && !hasChildren && !archived ? (
+        <MoveCategoryForm categoryId={categoryId} parentId={parentId} parents={parents} />
+      ) : null}
       <button onClick={() => setRenaming(true)} className="text-action">
         Rename
       </button>

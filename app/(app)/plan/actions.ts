@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
-import { categorySchema, planCellSchema, fieldErrors } from "@/lib/validation";
+import {
+  categoryMoveSchema,
+  categorySchema,
+  planCellSchema,
+  fieldErrors,
+} from "@/lib/validation";
 import { GENERIC_ERROR, type ActionState } from "@/lib/action-state";
 
 export async function createCategoryAction(
@@ -52,6 +57,48 @@ export async function renameCategoryAction(
       data: { name: parsed.data.name },
     });
     if (result.count === 0) return GENERIC_ERROR;
+    revalidatePath("/plan");
+    revalidatePath("/expenses");
+    return { ok: true };
+  } catch {
+    return GENERIC_ERROR;
+  }
+}
+
+/** Only one level: the target must be a main category and the moved one cannot have children. */
+export async function setCategoryParentAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const userId = await requireUserId();
+    const parsed = categoryMoveSchema.safeParse({
+      id: formData.get("id") ?? "",
+      parentId: formData.get("parentId") ?? "",
+    });
+    if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+    const { id } = parsed.data;
+
+    const category = await prisma.category.findFirst({ where: { id, userId } });
+    if (!category) return GENERIC_ERROR;
+
+    let parentId: string | null = null;
+    if (parsed.data.parentId) {
+      if (parsed.data.parentId === id) {
+        return { errors: { _form: "A category cannot be moved under itself." } };
+      }
+      const parent = await prisma.category.findFirst({
+        where: { id: parsed.data.parentId, userId, parentId: null },
+      });
+      if (!parent) return { errors: { _form: "Choose a main category" } };
+      const childCount = await prisma.category.count({ where: { userId, parentId: id } });
+      if (childCount > 0) {
+        return { errors: { _form: "Move its subcategories first." } };
+      }
+      parentId = parent.id;
+    }
+
+    await prisma.category.updateMany({ where: { id, userId }, data: { parentId } });
     revalidatePath("/plan");
     revalidatePath("/expenses");
     return { ok: true };
